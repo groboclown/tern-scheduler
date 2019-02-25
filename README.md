@@ -1,6 +1,6 @@
 # Tern - That Flocking Scheduler
 
-Tern aims to be a clusterable scheduling service, able to provide reliability and high availability in the scheduling service.
+Tern aims to be a cluster-friendly scheduling service, able to provide reliability and high availability in the scheduling service.
 
 It can run as an add-in library, a stand-alone application, or as a REST API application running with Express.
 
@@ -10,32 +10,11 @@ Tern is licensed under the [MIT License](LICENSE)
 
 ## Why Use Tern?
 
-Tern isn't fully written yet.  However, it is being developed with these goals:
+Tern is still under development, but it is being developed with these goals:
 
 * **Cluster safe.**  Multiple instances can run together without causing missed job execution or double executions.  Any situation that puts the system in an indeterminate state should provide hooks to the developer to tell the system how to handle it.
-* **Separation of job execution and scheduling.**  The codebase uses a simple API to add in job executors, but the onus is on you to handle job failure retries and monitoring.  You must provide code to either inform the scheduler when a job completes (or fails without further retries), or write a provider that can answer that question.
-* **Flexible schedule declarations.**  The service handles different request types, taking into account requested origin time zones.
-  * Immediate - run the job right now.
-  * A relative time in the future - "Run once 5 minutes from now."
-  * A fixed time in the future - "Run once on Saturday the 10th."
-  * Reoccurence.  Different kinds of repeated executions.  All of them can run with no end date, after a set number of occurrences, or on a specific date/time.
-    * At a fixed interval - "Run every 5 minutes."
-    * Since the last completion - "Run 5 minutes since the last success."
-    * Cron style.  Note that some appointment style patterns match 1-for-1 with the cron style.
-    * Appointment style.  A start time with a day recurrence pattern:
-      * Daily
-        * Every X days
-        * Every weekday
-      * Weekly
-        * Recur every X weeks
-        * Day(s) of the week to recur
-      * Monthly
-        * Every X day of every X months
-        * The (1st, 2nd, 3rd, last) (day, weekday, weekend day, Monday, Tues, etc) of every X months (TODO)
-      * Yearly
-        * Recur every X years. (TODO)
-        * On (month name) (day of month)
-        * On the (1st, 2nd, 3rd, last) (day, weekday, weekend day, Monday, Tues, etc) of (month name).  (TODO)
+* **Separation of job execution and scheduling.**  The base library uses a simple API to add in job executors, but the onus is on you to handle job failure retries and monitoring.  You must provide code to either inform the scheduler when a job completes (or fails without further retries), or write a provider that can answer that question.
+* **Flexible schedule declarations.**  The service handles different request types, taking into account requested origin time zones.  You can use one of the built in strategies, or make your own.
 * **Configurable Technology.**  Want to use a specific back-end data store?  Want to use a messaging system?  Need a specific REST API provider?  Tern is developed with flexibility in mind.  It provides some common back-ends, with clear instructions on what you need to do to add your own.
 * **Job retry.**  The scheduler allows for a job execution framework to retry running a job at some future time.
 * **Time Zone Awareness.**  Requests need to include a timezone parameter, and the server needs to be aware of the differences between the *requested* time zone and the *server* time zone.
@@ -49,13 +28,25 @@ The following are anti-goals for the project:
 
 ## Using Tern
 
-Let's find out together.  This section will be filled in as the tool is written.
+Tern Scheduler is primarily a scheduling library ("tern-core") along with additional libraries to help you tie it together into a usable tool.  This means, as an end user, you'll need to make some decisions about how you want to connect it all up.
+
+
+### What Are We Talking About
+
+Tern uses these terms to describe different aspects of the system:
+* *[data store](#choosing-a-data-store)* - The mechanism for providing persistent data storage.
+* *job* - An activity that the external job execution framework runs.
+* *job execution framework* - An external system that handles running and monitoring discrete units of work, called "jobs".  If the job framework chains several actions together, then that whole chain of actions are considered a single "job" by Tern.
+* *scheduled job* - A schedule for running a job, either once or on a reoccurring pattern.
+* *task* - A marker for when a specific job should run.
+* *strategy* - Part of the strategy programming pattern; it is a named way to perform a specific kind of action, or to answer a specific question.  Strategies are stored in a *strategy registration* object, to allow several approaches to the same problem.
+
 
 ### Choosing a Data Store
 
-Tern was designed to allow for different data storage technologies, depending upon your requirements.  There are some basic, minimal requirements that the technology must provide in order for it to work.  The biggest one is "atomic, conditional commit" - the store needs to reliably provide some mechanism to set some values on a record if and only if some preconditions on that record are met, and it must do so safely if a different actor tries to perform the same behavior on the same record from anywhere on the network.  The [datastore documentation](scheduler/src/datastore/README.md) details the requirements and implementation guidelines.
+Tern was designed to allow for different data storage technologies, depending upon your requirements.  There are some basic, minimal requirements that the technology must provide in order for it to work.  The biggest one is "atomic, conditional commit" - the store needs to reliably provide some mechanism to set some values on a record if and only if some preconditions on that record are met, and it must do so safely if a different actor tries to perform the same behavior on the same record from anywhere on the network.  The [data store documentation](scheduler/src/datastore/README.md) details the requirements and implementation guidelines.
 
-If you are running with one of the out-of-the-box data stores, you just need to `require` the module and intantiate it according to its instructions (such as providing connection information).  Right now, those modules are:
+If you are running with one of the out-of-the-box data stores, you just need to `require` the module and instantiate it according to its instructions (such as providing connection information).  Right now, those modules are:
 
 * `tern-scheduler~lib/datastore/memory` - an in-memory data storage which is only useful for local testing.  It cannot work with multiple instances of the service.
 
@@ -103,7 +94,7 @@ Many aspects of the scheduler are allowed to be configured through a strategy pa
 
 ### Handling Errors
 
-All errors encountered in the schedule are passed to the [event message emitter](scheduler/src/messaging/README.md).  By default, errors are reported to STDERR.  You can add a new handler by listening to the `generalError` event on the message emitter.
+All errors encountered in the schedule are passed to the [event message emitter](scheduler/src/messaging/README.md).  By default, errors are reported to standard error.  You can add a new handler by listening to the `generalError` event on the message emitter.
 
 
 ## Under the Covers

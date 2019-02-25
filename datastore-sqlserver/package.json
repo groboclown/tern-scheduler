@@ -1,7 +1,7 @@
 {
-  "name": "tern-scheduler~lib",
+  "name": "datastore-sqlserver",
   "version": "0.0.1",
-  "description": "Task Scheduler Service for Node",
+  "description": "Microsoft SQL Server datastore back end for the Tern Scheduler",
   "main": "src/index.js",
   "scripts": {
     "build": "",
@@ -28,9 +28,7 @@
     "typescript": "^3.3.3"
   },
   "dependencies": {
-    "@types/uuid": "^3.4.4",
-    "strict-event-emitter-types": "^2.0.0",
-    "uuid": "^3.3.2"
+    "mssql": "^4.3.2"
   },
   "mocha": {}
 }
