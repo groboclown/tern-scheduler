@@ -1,0 +1,10 @@
+
+# Basic Node Stuff
+node_modules/
+
+# TSC stuff
+dist/
+
+# IDE stuff
+.vscode/
+

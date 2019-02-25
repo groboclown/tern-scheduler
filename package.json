@@ -1,0 +1,17 @@
+{
+  "name": "tern-scheduler",
+  "version": "0.0.1",
+  "description": "Task Scheduler Service for Node",
+  "main": "index.js",
+  "scripts": {
+    "build": "cd scheduler && npm run build",
+    "test": "exit 1"
+  },
+  "keywords": [
+    "scheduler",
+    "node",
+    "nodejs"
+  ],
+  "author": "Groboclown",
+  "license": "MIT"
+}
