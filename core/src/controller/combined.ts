@@ -29,6 +29,7 @@ import {
   RetryTaskStrategy,
   DuplicateTaskStrategyRegistry,
   DUPLICATE_TASK_SKIP_NEW,
+  CurrentTimeUTCStrategy,
 } from '../strategies'
 import { TaskCreationStrategyRegistry } from '../strategies/task-creation'
 import {
@@ -166,7 +167,8 @@ export function startTask(
   task: TaskModel,
   leaseBehavior: LeaseBehavior,
   now: Date,
-  startJob: StartJob
+  startJob: StartJob,
+  currentTimeUTC: CurrentTimeUTCStrategy,
 ): Promise<void> {
   return runUpdateInLease(store, task.schedule, now, leaseBehavior, (job) =>
     store
@@ -178,14 +180,13 @@ export function startTask(
             // job just failing; this means the job framework just couldn't
             // perform its actions.
             store
-              .markTaskStartFailed(task, now, String(e))
+              .markTaskStartFailed(task, currentTimeUTC(), String(e))
               .then(() => Promise.reject(e))
           )
       )
       .then((execId) =>
         store
-          // FIXME this needs to be a different date value...
-          .markTaskStarted(task, now, execId)
+          .markTaskStarted(task, currentTimeUTC(), execId)
       )
   )
 }
@@ -232,7 +233,8 @@ export function taskFinished(
                 return Promise.resolve(null)
               }
               // Queue a retry task
-              // TODO get a new "now" value
+              // Retry time is based on when the task was discovered to be failed,
+              // which is the "now" time.
               const retryTime = new Date(now.valueOf())
               retryTime.setSeconds(retryTime.getSeconds() + retryInSeconds)
               // Check if there's another task already in queued or running state

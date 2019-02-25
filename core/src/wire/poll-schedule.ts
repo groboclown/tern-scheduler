@@ -1,16 +1,15 @@
 import {
   DataStore
-} from "../datastore"
+} from '../datastore'
 import {
   MessagingEventEmitter
-} from "../messaging"
+} from '../messaging'
 import {
   GeneratePollWaitTimesStrategy,
   RegisterPollCallback,
-} from "../strategies";
-import { TernError } from "../errors"
-import { currentTimeUTC } from "./time-util";
-import { pollLoop } from "../strategies/poll";
+  CurrentTimeUTCStrategy,
+} from '../strategies'
+import { pollLoop } from '../strategies/poll'
 
 const POLL_JOBS_LIMIT = 10
 
@@ -20,6 +19,7 @@ const POLL_JOBS_LIMIT = 10
 export function pollScheduledJobsForTaskCreation(
   store: DataStore,
   pollStrat: GeneratePollWaitTimesStrategy,
+  currentTimeUTC: CurrentTimeUTCStrategy,
   registerPoll: RegisterPollCallback,
   messaging: MessagingEventEmitter
 ): void {
@@ -41,6 +41,7 @@ export function pollScheduledJobsForTaskCreation(
 export function pollScheduledJobsForExpiredLeases(
   store: DataStore,
   pollStrat: GeneratePollWaitTimesStrategy,
+  currentTimeUTC: CurrentTimeUTCStrategy,
   registerPoll: RegisterPollCallback,
   messaging: MessagingEventEmitter
 ): void {

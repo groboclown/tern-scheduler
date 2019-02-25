@@ -12,9 +12,6 @@ import {
   MessagingEventEmitter
 } from '../messaging'
 import {
-  currentTimeUTC
-} from './time-util'
-import {
   JobExecutionManager,
 } from '../executor'
 import {
@@ -22,9 +19,11 @@ import {
   DuplicateTaskStrategyRegistry,
   TaskCreationStrategyRegistry,
   CreatePrimaryKeyStrategy,
+  CurrentTimeUTCStrategy,
 } from '../strategies'
 import {
-  logCriticalError, logNotificationError
+  logCriticalError,
+  logNotificationError,
 } from '../logging'
 
 
@@ -43,6 +42,7 @@ export function wireDataStore(
   duplicateReg: DuplicateTaskStrategyRegistry,
   taskCreationReg: TaskCreationStrategyRegistry,
   createPrimaryKeyStrat: CreatePrimaryKeyStrategy,
+  currentTimeUTC: CurrentTimeUTCStrategy
 ): void {
   jobExecutor.withMessaging(messaging)
   messaging
@@ -74,7 +74,7 @@ export function wireDataStore(
     })
     .on('taskReadyToExecute', task => {
       const now = currentTimeUTC()
-      startTask(store, task, leaseBehavior, now, jobExecutor.startJob)
+      startTask(store, task, leaseBehavior, now, jobExecutor.startJob, currentTimeUTC)
         .catch(e => {
           messaging.emit('generalError', e)
         })

@@ -9,19 +9,15 @@ import {
   LeaseIdType,
   ScheduledJobModel,
 } from '../model'
-
 import {
   DataStore,
 } from '../datastore'
-
 import {
   PollWaitTimes,
 } from '../strategies/poll'
-
 import {
   ScheduledJobNotFoundError, TernError,
 } from '../errors'
-
 import {
   logNotificationError,
   logDebug,
@@ -29,10 +25,11 @@ import {
 import {
   CreateLeaseOwnerStrategy,
   CreatePrimaryKeyStrategy,
-} from '../strategies';
+  RegisterPollCallback,
+} from '../strategies'
 import {
   SCHEDULE_STATE_UPDATING, SCHEDULE_STATE_ACTIVE,
-} from '../model/schedule';
+} from '../model/schedule'
 
 
 /**
@@ -52,10 +49,10 @@ export interface NewScheduledJob {
 
 
 export interface LeaseBehavior {
-  leaseOwnerStrategy: CreateLeaseOwnerStrategy,
+  leaseOwnerStrategy: CreateLeaseOwnerStrategy
 
   /** How long leases should be held for */
-  leaseTimeSeconds: number,
+  leaseTimeSeconds: number
 
   /**
    * Strategy for retrying to obtain the lease.
@@ -71,7 +68,7 @@ export interface LeaseBehavior {
    *
    * Allows for configurable behavior, including mocking out the time calls.
    */
-  registerRetryCallback(delaySeconds: number, callback: () => void): void
+  registerRetryCallback: RegisterPollCallback
 }
 
 

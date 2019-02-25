@@ -16,9 +16,9 @@ import {
   DuplicateTaskStrategyRegistry,
 } from './duplicate-task'
 import {
-  CreateLeaseOwnerStrategy,
-  CreateLeaseOwnerStrategyRegistry,
-} from './lease-owner'
+  CreateLeaseIdStrategy,
+  CreateLeaseIdStrategyRegistry,
+} from './lease-id'
 import {
   CreateLeaseTimeInSecondsStrategy,
   CreateLeaseTimeInSecondsStrategyRegistry,
@@ -31,6 +31,11 @@ import {
   RetryTaskStrategy,
   RetryTaskStrategyRegistry,
 } from './retry'
+import {
+  CurrentTimeUTCStrategy,
+  CurrentTimeUTCStrategyRegistry,
+} from './time'
+
 
 
 export {
@@ -45,13 +50,16 @@ export {
   TaskCreationStrategyRegistry,
 } from './task-creation'
 export {
-  CreateLeaseOwnerStrategy,
-} from './lease-owner'
+  CreateLeaseIdStrategy,
+  addUUIDCreateLeaseIdStrategy,
+} from './lease-id'
 export {
   CreateLeaseTimeInSecondsStrategy,
+  CreateLeaseRetryTimeInSecondsStrategy,
 } from './lease-time'
 export {
   GeneratePollWaitTimesStrategy,
+  GeneratePollWaitTimesStrategyRegistry,
   RegisterPollCallback,
 } from './poll'
 export {
@@ -64,6 +72,11 @@ export {
   RetryTaskStrategy,
   RetryTaskStrategyRegistry,
 } from './retry'
+export {
+  CurrentTimeUTCStrategy,
+  CurrentTimeUTCStrategyRegistry,
+  registerStandardTimeStrategy,
+} from './time'
 
 
 /**
@@ -71,21 +84,34 @@ export {
  * others are dependent upon the context.
  */
 export interface AllStrategies {
-  // Per instance
-  getCreatePrimaryKeyStrategy(): CreatePrimaryKeyStrategy
-  getCreateLeaseOwnerStrategy(): CreateLeaseOwnerStrategy
-  getCreateLeaseTimeInSecondsStrategy(): CreateLeaseTimeInSecondsStrategy
+  // Global
+  readonly createPrimaryKeyStrategy: CreatePrimaryKeyStrategy
+  readonly createLeaseIdStrategy: CreateLeaseIdStrategy
+  readonly createLeaseTimeInSecondsStrategy: CreateLeaseTimeInSecondsStrategy
+  readonly currentTimeUTCStrategy: CurrentTimeUTCStrategy
+  readonly generatePollWaitTimesStrategy: GeneratePollWaitTimesStrategy
 
-  // Per context
-  getTaskCreationStrategy(name: StrategyName): TaskCreationStrategy
-  getDuplicateTaskStrategy(name: StrategyName): DuplicateTaskStrategy
-  getGeneratePollWaitTimesStrategy(name: StrategyName): GeneratePollWaitTimesStrategy
-  getRetryTaskStrategy(name: StrategyName): RetryTaskStrategy
+  // Specific per context
+  readonly taskCreationStrategyRegistry: TaskCreationStrategyRegistry
+  readonly duplicateTaskStrategyRegistry: DuplicateTaskStrategyRegistry
+  readonly retryTaskStrategyRegistry: RetryTaskStrategyRegistry
 }
 
-/*
-export class AllStrategies implements AllStrategyRegistry{
-  readonly createPrimaryKey: CreatePrimaryKeyStrategyRegistry
-  readonly
+class StrategyRegistryImpl<T> implements StrategyRegistry<T> {
+  private readonly reg: { [name: string]: T } = {}
+
+  register(name: StrategyName, strat: T): void {
+    this.reg[name] = strat
+  }
+  get(name: StrategyName): T {
+    const ret = this.reg[name]
+    if (!ret) {
+      throw new Error(`No such registered strategy "${name}"`)
+    }
+    return ret
+  }
 }
-*/
+
+export function createStrategyRegistry<T>(): StrategyRegistry<T> {
+  return new StrategyRegistryImpl<T>()
+}

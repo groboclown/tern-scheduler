@@ -73,4 +73,6 @@ export interface MessagingEvents
   extends ScheduledJobEvents, TaskEvents, JobExecutionEvents, ErrorEvents {
 }
 
+export type JobExecutionEventEmitter = StrictEventEmitter<EventEmitter, JobExecutionEvents>
+
 export type MessagingEventEmitter = StrictEventEmitter<EventEmitter, MessagingEvents>

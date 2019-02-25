@@ -1,17 +1,16 @@
 
 import {
   DataStore
-} from "../datastore"
+} from '../datastore'
 import {
   MessagingEventEmitter
-} from "../messaging"
+} from '../messaging'
 import {
   GeneratePollWaitTimesStrategy,
   RegisterPollCallback,
-} from "../strategies";
-import { TernError } from "../errors"
-import { currentTimeUTC } from "./time-util";
-import { pollLoop } from "../strategies/poll";
+} from '../strategies'
+import { currentTimeUTC } from '../internal/time-util'
+import { pollLoop } from '../strategies/poll'
 
 const POLL_TASKS_LIMIT = 10
 

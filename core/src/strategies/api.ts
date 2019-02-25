@@ -15,7 +15,9 @@ export interface StrategyRegistry<T> {
    */
   register(name: StrategyName, strat: T): void
 
-  // Throws an exception if not found
+  /**
+   * Throws an exception if not found
+   */
   get(name: StrategyName): T
 }
 

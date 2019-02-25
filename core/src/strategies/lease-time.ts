@@ -3,14 +3,16 @@ import {
   StrategyName,
   StrategyRegistry,
 } from './api'
-
 import {
-  LeaseIdType
-} from '../model'
+  PollWaitTimes
+} from './poll'
 
 export type CreateLeaseTimeInSecondsStrategy =
-  (leaseOwner: LeaseIdType) => number
+  () => number
 
+
+export type CreateLeaseRetryTimeInSecondsStrategy =
+  () => PollWaitTimes
 
 export interface CreateLeaseTimeInSecondsStrategyRegistry extends StrategyRegistry<CreateLeaseTimeInSecondsStrategy> {
 

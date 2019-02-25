@@ -9,9 +9,15 @@ import {
   LeaseIdType,
 } from '../../model'
 
+export const UUIDHostname = {
+  hostname:
+    process.env.HOSTNAME === undefined
+      ? 'localhost'
+      : process.env.HOSTNAME
+}
 
-export const UUIDCreatePrimaryKeyStrategy: CreatePrimaryKeyStrategy = (leaseOwner: LeaseIdType): PrimaryKeyType => {
-  return uuid5(leaseOwner, uuid5.DNS)
+export const UUIDCreatePrimaryKeyStrategy: CreatePrimaryKeyStrategy = (): PrimaryKeyType => {
+  return uuid5(UUIDHostname.hostname, uuid5.DNS)
 }
 
 export const UUID_PK_STRAT_NAME = 'uuid'
