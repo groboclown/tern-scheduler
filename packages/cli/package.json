@@ -1,5 +1,5 @@
 {
-  "name": "cli",
+  "name": "@tern-scheduler/cli",
   "version": "0.0.1",
   "description": "Basic Stand-Alone service for the Tern Task Scheduler Service for Node",
   "main": "index.js",
@@ -12,7 +12,15 @@
     "nodejs"
   ],
   "author": "Groboclown",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/groboclown/tern-scheduler.git",
+    "directory": "packages/cli"
+  },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "typescript": "^3.3.3"
   }

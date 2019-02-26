@@ -4,7 +4,7 @@
   "description": "Task Scheduler Service for Node",
   "main": "index.js",
   "scripts": {
-    "build": "cd scheduler && npm run build",
+    "build": "cd packages/core && npm run build",
     "test": "echo \"Add test links here\" ; exit 1",
     "bootstrap": "./node_modules/.bin/lerna bootstrap"
   },

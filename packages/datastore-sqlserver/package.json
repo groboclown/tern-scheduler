@@ -1,5 +1,5 @@
 {
-  "name": "datastore-sqlserver",
+  "name": "@tern-scheduler/datastore-sqlserver",
   "version": "0.0.1",
   "description": "Microsoft SQL Server datastore back end for the Tern Scheduler",
   "main": "src/index.js",
@@ -15,7 +15,15 @@
     "nodejs"
   ],
   "author": "Groboclown",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/groboclown/tern-scheduler.git",
+    "directory": "packages/datastore-sqlserver"
+  },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.6",
