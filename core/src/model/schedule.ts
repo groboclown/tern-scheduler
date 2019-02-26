@@ -13,13 +13,13 @@ export type SCHEDULE_STATE_UPDATING = 'updating'
 /** A server marked the record as being updated */
 export const SCHEDULE_STATE_UPDATING = 'updating'
 
-export type SCHEDULE_STATE_UPDATE_ERROR = 'update-error'
+export type SCHEDULE_STATE_REPAIR = 'repair'
 /** The server who owns the queue encountered an error trying to start the task. */
-export const SCHEDULE_STATE_UPDATE_ERROR = 'update-error'
+export const SCHEDULE_STATE_REPAIR = 'repair'
 
 export type ScheduleStateType =
   SCHEDULE_STATE_DISABLED | SCHEDULE_STATE_ACTIVE |
-  SCHEDULE_STATE_UPDATING | SCHEDULE_STATE_UPDATE_ERROR
+  SCHEDULE_STATE_UPDATING | SCHEDULE_STATE_REPAIR
 
 /**
  * Name of the instance that requests the lease, and must be unique across instances.  This can be IP + PID.
@@ -46,16 +46,6 @@ export interface ScheduledJobModel extends BaseModel {
   readonly displayName: string
   readonly description: string
   readonly createdOn: Date
-
-  /**
-   * When the last created task's expiration was set to.  Used in determining
-   * if another task should be queued while the first one is still queued.
-   *
-   * Stored in UTC time zone.
-   *
-   * Alterable after creation.
-   */
-  readonly lastTaskExecutionDate: Date | null
 
   /**
    * What to do if a task is scheduled to run when another of the

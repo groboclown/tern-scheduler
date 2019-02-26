@@ -12,7 +12,7 @@ import {
 } from '../../model/schedule'
 import {
   NewScheduledJob,
-  createScheduledJob,
+  createScheduledJobAlone,
   runUpdateInLease,
 } from '../schedule'
 import {
@@ -56,7 +56,6 @@ describe('schedule controller', () => {
     leaseOwner: null,
     state: SCHEDULE_STATE_ACTIVE,
     createdOn: now,
-    lastTaskExecutionDate: null,
     pk: createdPk
   }
   describe('#createScheduledJob', () => {
@@ -66,7 +65,7 @@ describe('schedule controller', () => {
         const store = new DatabaseDataStore(db)
         // updateSchema returns a promise, but it it's only for API compliance, and the schema is created immediately.
         store.updateSchema()
-        return createScheduledJob(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve(job.pk))
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve({ value: job.pk }))
           .then(pk => {
             const schedTable = db.testAccess(SCHEDULE_MODEL_NAME)
             expect(schedTable).to.exist
@@ -86,7 +85,7 @@ describe('schedule controller', () => {
         store.addScheduledJobModel = () => {
           return Promise.reject(err)
         }
-        return createScheduledJob(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve(job.pk))
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve(job.pk))
           .then(() => { fail(`did not throw error`) })
           .catch(e => {
             expect(e).to.equal(err)
@@ -104,7 +103,7 @@ describe('schedule controller', () => {
         const db = new MemoryDatabase()
         const store = new DatabaseDataStore(db)
         store.updateSchema()
-        return createScheduledJob(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve(job.pk))
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve(job.pk))
           .then(pk => {
             expect(pk).to.equal(createdPk)
             // Force an unlock of the job
@@ -152,7 +151,7 @@ describe('schedule controller', () => {
         const leaseBehavior = new ImmediateLeaseBehavior(10, [], createOwnerStrat)
         const now = new Date()
         store.updateSchema()
-        return createScheduledJob(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve(job.pk))
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, (job) => Promise.resolve(job.pk))
           .then(pk => {
             expect(pk).to.equal(createdPk)
             // Force an unlock of the job

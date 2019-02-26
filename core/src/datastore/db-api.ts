@@ -92,26 +92,6 @@ export function isOneOfConditional<T>(v: Conditional | undefined | null): v is O
 }
 
 
-export class NullConditional implements Conditional {
-  readonly type = 'null'
-  constructor(public readonly key: string) { }
-}
-
-export function isNullConditional(v: Conditional | undefined | null): v is NotNullConditional {
-  return (!!v) && v.type === 'null'
-}
-
-
-export class NotNullConditional implements Conditional {
-  readonly type = 'notnull'
-  constructor(public readonly key: string) { }
-}
-
-export function isNotNullConditional(v: Conditional | undefined | null): v is NotNullConditional {
-  return (!!v) && v.type === 'notnull'
-}
-
-
 export class OrConditional implements Conditional {
   readonly type = 'or'
   constructor(

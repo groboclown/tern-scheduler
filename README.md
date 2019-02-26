@@ -149,9 +149,6 @@ The implementation uses a variation on the [two-phase commit protocol](https://e
 
 ## Implementation TO-DOs
 
-* **Scheduled job lease expiration** - should the lock be stolen by the next process that needs to handle its previously committed state, or should it only be handled by a repair activity?
+* **Scheduled job lease expiration** - Currently have leases not stolen, but the lease stealing and scheduled job repair is not implemented yet.
 * **Long running task repair** - does this need its own field on the task record so it knows when to next trigger?  That handles the case where it needs logic to "try again in X seconds".  This also needs some behavior to query the job execution framework to detect if the job is still running (and needs more time), or if it's dead, or if it needs its own repair.  Putting this into a field means that the logic here becomes a heartbeat that must be known at the task creation time.
-* **Zombie scheduled jobs** - when a scheduled job's "peel" behavior returns a null value, that puts the schedule into a weird state.  When does the next task get peeled?  Should it be put into a disabled state?  If the task creation strategy has ill-thought out logic, it could cause scheduled jobs to either be constantly polled with no action (potentially leaving the poll query returning only zombie scheduled jobs), or never polled again.  Either is potentially bad.
-* **TaskCreationStrategy.createFromNewSchedule** - code that calls this needs to be inspected; the method now MUST always return a non-null value.
-* **TaskCreationStrategy.createAfterTaskCompletes** - make sure this is called only when a task finishes without further retries.
-* **TaskCreationStrategy.createOnPoll** - make sure this uses the `pollStrategy` name, and that it runs only on the first non-retry action.  In fact, this should be removed and changed to "createAfterTaskStarts", and no poll strategy is needed.
+* **TaskCreationStrategy** - everything that uses this needs to be rewritten.  "Combined" needs a lot of work for this.

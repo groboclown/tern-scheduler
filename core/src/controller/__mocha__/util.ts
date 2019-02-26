@@ -1,4 +1,6 @@
 
+import StrictEventEmitter from 'strict-event-emitter-types'
+import EventEmitter from 'events'
 import {
   LeaseBehavior,
 } from '../schedule'
@@ -11,17 +13,20 @@ import {
 } from '../../model'
 import {
   CreatePrimaryKeyStrategy,
-  CreateLeaseOwnerStrategy,
+  CreateLeaseIdStrategy,
 } from '../../strategies'
 import {
   MemoryDatabase
 } from '../../datastore/memory'
+import {
+  MessagingEventEmitter
+} from '../../messaging'
 
 export class ImmediateLeaseBehavior implements LeaseBehavior {
   constructor(
     readonly leaseTimeSeconds: number,
     readonly retrySecondsDelay: number[],
-    readonly leaseOwnerStrategy: CreateLeaseOwnerStrategy
+    readonly leaseOwnerStrategy: CreateLeaseIdStrategy
   ) { }
 
   registerRetryCallback(_: number, callback: () => void): void {

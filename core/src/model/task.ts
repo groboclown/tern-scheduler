@@ -83,6 +83,13 @@ export interface TaskModel extends BaseModel {
   readonly executionFinished: Date | null
 
   /**
+   * The next time the status of this task should be checked for
+   * "too long" issues.  Only useful if polling is used for any
+   * status.
+   */
+  readonly nextTimeoutCheck: Date | null
+
+  /**
    * Which retry number this task represents.  The first run is 0.
    * When a task requires a retry, the state is set to TASK_STATE_FAIL_RESTARTED,
    * and a new task is created with an incremented retryIndex value.

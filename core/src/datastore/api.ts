@@ -13,8 +13,8 @@ import {
 } from '../model'
 import {
   SCHEDULE_STATE_DISABLED,
-  SCHEDULE_STATE_UPDATE_ERROR,
-  SCHEDULE_STATE_ACTIVE
+  SCHEDULE_STATE_ACTIVE,
+  SCHEDULE_STATE_REPAIR
 } from '../model/schedule'
 import {
   ExecutionJobId
@@ -63,17 +63,11 @@ export interface DataStore {
   getJob(pk: PrimaryKeyType): Promise<ScheduledJobModel | null>
 
   /**
-   * Return a collection of `ScheduledJobModel` that can possibly have a new task
-   * be created from them.  Such scheduled jobs must match these criteria:
-   * * Not currently leased.
-   * * The last task execution time is earlier than the `now` value.
+   * Search for expired scheduled jobs.
    *
-   * It should be restricted to `limit` number of values, but that's mostly a suggestion.
-   * It can return fewer than that number if there are not that many kinds of jobs
-   * available, or if going past a smaller number would require paging in data.
+   * @param now
+   * @param limit
    */
-  pollTaskableScheduledJobs(now: Date, limit: number): Promise<ScheduledJobModel[]>
-
   pollLeaseExpiredScheduledJobs(now: Date, limit: number): Promise<ScheduledJobModel[]>
 
   /**
@@ -97,22 +91,17 @@ export interface DataStore {
   getDisabledScheduledJobs(pageKey: string | null, limit: number): Promise<Page<ScheduledJobModel>>
 
   /**
-   * Attempts to enable the job.  If the job is already enabled, then this
-   * returns a false value.  If the job is not in the data store, then an
-   * error is sent to the promise's reject.
+   * Attempts to disable the job.  If the job is already disabled, then this
+   * returns a false value.  If the job could not be locked before disabling,
+   * or if it is not in the data store, then an error is sent to the
+   * promise's reject.
+   *
+   * Scheduled jobs cannot be enabled.  If you want to enable a job, you must
+   * create a new one.
    *
    * @param job
    */
-  enableScheduledJob(job: ScheduledJobModel): Promise<boolean>
-
-  /**
-   * Attempts to disable the job.  If the job is already disabled, then this returns a
-   * false value.  If the job could not be locked before disabling, or if it is not in the
-   * data store, then an error is sent to the promise's reject.
-   *
-   * @param job
-   */
-  disableScheduledJob(job: ScheduledJobModel, leaseId: LeaseIdType): Promise<boolean>
+  disableScheduledJob(sched: ScheduledJobModel, leaseId: LeaseIdType): Promise<boolean>
 
   /**
    * Attempts to delete the job only if it is disabled.  If the job is not in
@@ -120,21 +109,16 @@ export interface DataStore {
    *
    * @param job
    */
-  deleteScheduledJob(job: ScheduledJobModel): Promise<boolean>
+  deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean>
 
   /**
-   * Create a lease on the scheduled job.  This must obtain the lease if and only if:
-   * * One of:
-   *   * The job is in the ACTIVE state.
-   *   * The lease expiration on the job is before `now` (steal the lease)
-   * Do not take the list if it is not expired, even if the lease ID matches up.
+   * Create a lease on the scheduled job.  This must obtain the lease if and only if
+   * the job is in the ACTIVE state.  The lease is never stolen.
+   * Do not take the lease if it is not expired, even if the lease ID matches up.
    *
    * Errors are raised in the promise for:
    * * Lease could not be obtained (some other process has the lock)
    * * Job is not in the data store
-   *
-   * Note: currently, due to the way the lease break happens, this does not detect if it
-   * stole the lease or not.
    *
    * @param leaseId the lease ID is a custom value per lease operation.
    * @param now the date for right now; must be in UTC time zone; some data stores may instead
@@ -159,28 +143,31 @@ export interface DataStore {
    * @param leaseId
    */
   releaseScheduledJobLease(leaseId: LeaseIdType, jobPk: PrimaryKeyType,
-    releaseState: SCHEDULE_STATE_DISABLED | SCHEDULE_STATE_UPDATE_ERROR | SCHEDULE_STATE_ACTIVE
+    releaseState: SCHEDULE_STATE_DISABLED | SCHEDULE_STATE_ACTIVE
   ): Promise<void>
 
   /**
-   * Mark that some unexpected problem happened during the lease which has lead to a situation
-   * where the state of the tasks is indeterminate.
+   * Steal an expired lease.  Used by tasks that need to repair the lease state.
+   * The lease is broken if and only if its state is UPDATING or REPAIR and the
+   * lease expiration is before `now`.  The state after stealing is REPAIR.
    *
-   * @param leaseId
    * @param jobPk
+   * @param newLeaseId
+   * @param now
+   * @param leaseTimeSeconds
    */
-  failureDuringScheduledJobLease(leaseId: LeaseIdType, jobPk: PrimaryKeyType): Promise<void>
+  repairExpiredLeaseForScheduledJob(jobPk: PrimaryKeyType, newLeaseId: LeaseIdType,
+    now: Date, leaseTimeSeconds: number): Promise<void>
 
   /**
-   * Sets the next task execution time on the scheduled job.  For this to work, the scheduled job must:
-   * * be leased (lease IDs must match up)
-   * * current execution date is null or earlier than `execTime`
+   * Mark the currently leased scheduled job as needing repair.  It does this by
+   * setting the lease expiration to `now`, so that the scheduled job repair
+   * polling mechanism can begin repairs to the scheduled job.
    *
-   * @param leaseId
    * @param jobPk
-   * @param execTime
+   * @param now
    */
-  setNextTaskExecutionTime(leaseId: LeaseIdType, jobPk: PrimaryKeyType, execTime: Date): Promise<boolean>
+  markLeasedScheduledJobNeedsRepair(jobPk: PrimaryKeyType, now: Date): Promise<void>
 
 
   // ------------------------------------------------------------------------

@@ -53,14 +53,6 @@ function conditionalMatchesRecord(record: any, cnd: api.Conditional): boolean {
     const val = record[cnd.key]
     return cnd.values.indexOf(val) >= 0
   }
-  if (api.isNotNullConditional(cnd)) {
-    const val = record[cnd.key]
-    return !!val
-  }
-  if (api.isNullConditional(cnd)) {
-    const val = record[cnd.key]
-    return val === null || val === undefined
-  }
   throw new Error(`Unknown conditional type ${cnd.type}`)
 }
 

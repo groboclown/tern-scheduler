@@ -6,7 +6,7 @@ export {
 
 export {
   createTaskForSchedule,
-  createSchedule,
+  createScheduledJob as createSchedule,
   startTask,
   taskFinished,
   enableSchedule,

@@ -23,13 +23,14 @@ import {
   logDebug,
 } from '../logging'
 import {
-  CreateLeaseOwnerStrategy,
+  CreateLeaseIdStrategy,
   CreatePrimaryKeyStrategy,
   RegisterPollCallback,
 } from '../strategies'
 import {
-  SCHEDULE_STATE_UPDATING, SCHEDULE_STATE_ACTIVE,
+  SCHEDULE_STATE_UPDATING, SCHEDULE_STATE_ACTIVE, SCHEDULE_STATE_DISABLED, SCHEDULE_STATE_REPAIR,
 } from '../model/schedule'
+import { MessagingEventEmitter } from '../messaging';
 
 
 /**
@@ -49,7 +50,7 @@ export interface NewScheduledJob {
 
 
 export interface LeaseBehavior {
-  leaseOwnerStrategy: CreateLeaseOwnerStrategy
+  leaseOwnerStrategy: CreateLeaseIdStrategy
 
   /** How long leases should be held for */
   leaseTimeSeconds: number
@@ -72,30 +73,60 @@ export interface LeaseBehavior {
 }
 
 
+export interface LeaseExitStateValue<T> {
+  value: T
+  state?: SCHEDULE_STATE_ACTIVE | SCHEDULE_STATE_DISABLED
+}
+
+
+export interface LeaseExitStateError {
+  error: any
+  state?: SCHEDULE_STATE_REPAIR | SCHEDULE_STATE_DISABLED
+}
+
+export type LeaseExitState<T> = LeaseExitStateValue<T> | LeaseExitStateError
+
+function isLeaseExitStateValue<T>(v: LeaseExitState<T>): v is LeaseExitStateValue<T> {
+  return !!(<any>v).value
+}
+
+function isLeaseExitStateError<T>(v: LeaseExitState<T>): v is LeaseExitStateError {
+  return !!(<any>v).error
+}
+
+
 /**
+ * Creates the scheduled job in a leased state, then runs the `withLease` action,
+ * then releases the lease.  Any generated error will put the scheduled job
+ * into a needs-repair state.
+ *
+ * All errors in the returned promise have not been reported to the messaging
+ * events.  Only internal errors that would otherwise mask the more important
+ * errors are reported to the messaging events.
+ *
  * For internal use of the controller; end-users should use the
  * `combined` method instead.
  */
-export function createScheduledJob<T>(
+export function createScheduledJobAlone<T>(
   store: DataStore,
   scheduledJob: NewScheduledJob,
   now: Date,
   leaseBehavior: LeaseBehavior,
   pkStrategy: CreatePrimaryKeyStrategy,
-  withLease: (scheduledJob: ScheduledJobModel) => Promise<T> | T
+  messaging: MessagingEventEmitter,
+  withLease: (scheduledJob: ScheduledJobModel) => Promise<LeaseExitState<T>> | LeaseExitState<T>
 ): Promise<T> {
   const leaseOwner = leaseBehavior.leaseOwnerStrategy()
-  const job: ScheduledJobModel = {
+  const sched: ScheduledJobModel = {
     ...scheduledJob,
     state: SCHEDULE_STATE_UPDATING,
     createdOn: now,
-    lastTaskExecutionDate: null,
     pk: pkStrategy()
   }
   logDebug('createScheduledJob', `starting addScheduledJobModel`)
 
   return store
-    .addScheduledJobModel(job, leaseOwner, now, leaseBehavior.leaseTimeSeconds)
+    .addScheduledJobModel(sched, leaseOwner, now, leaseBehavior.leaseTimeSeconds)
 
     // FIXME DEBUG
     .catch(e => { logDebug(`caught addSchJob error`, e); throw e })
@@ -105,54 +136,75 @@ export function createScheduledJob<T>(
       logDebug('createScheduledJob', `after addScheduledJobModel succeeded`)
       // If the with-lease execution fails, then mark the update lease failure.
       // That means we need special handling just in here...
-      let t: Promise<T> | T
+      let t: Promise<LeaseExitState<T>> | LeaseExitState<T>
       try {
-        t = withLease(job)
+        t = withLease(sched)
       } catch (e) {
-        // Same as a catch...
-        return updateInLeaseFailed(store, leaseOwner, job.pk)
-          // If the updateInLeaseFailed call fails, that error isn't
-          // important.
-          .catch(e2 => {
-            logNotificationError('updateInLeaseFailed caused problem after lease operation failed', e2)
-            throw e
-          })
-          .then(() => { throw e })
+        // The job must enter a needs-repair state.
+        t = {
+          error: e,
+          state: SCHEDULE_STATE_DISABLED
+        }
       }
       if (t instanceof Promise) {
-        // TODO need to re-examine this situation.  It may be a different
-        // kind of state, or just released state.
         return t
-          .catch(e =>
-            // Ensure that we propigate the failure...
-            updateInLeaseFailed(store, leaseOwner, job.pk)
-              // If the updateInLeaseFailed call fails, that error isn't
-              // important.
-              .catch(e2 => {
-                logNotificationError('updateInLeaseFailed caused problem after lease operation failed', e2)
-                throw e
-              })
-              .then(() => { throw e })
-          )
+          // Catch the promise errors first, because the "then" condition
+          // can raise its own separate error.
+          .catch(e => (<LeaseExitStateError>{ error: e, state: SCHEDULE_STATE_REPAIR }))
       } else {
-        // Everything's fine
+        // It's fine.  Right?
         return Promise.resolve(t)
       }
     })
+    .catch(e => {
+      // Some problem was thrown while performing the other logic in the above
+      // block.  This is a critical internal error.
+      return store
+        .markLeasedScheduledJobNeedsRepair(sched.pk, now)
+        .catch(e2 => {
+          // Lease release failed.  It's not as important as the inner error,
+          // so report it and rethrow the inner error.
+          messaging.emit('generalError', e2)
+          throw e
+        })
+        .then(() => Promise.reject(e))
+    })
     // With successful update behavior, release the lease and return the result.
-    .then(result =>
-      store.releaseScheduledJobLease(leaseOwner, job.pk, SCHEDULE_STATE_ACTIVE)
-        // Success all the way through.
-        .then(() => result)
-      // Error releasing the lease is normally propigated up.
-      // This will usually mean either a data store problem or
-      // something else already stole the lease.
-    )
+    .then(result => {
+      const endState = result.state || SCHEDULE_STATE_ACTIVE
+      return (
+        endState === SCHEDULE_STATE_REPAIR
+          ? store.markLeasedScheduledJobNeedsRepair(sched.pk, now)
+          : store.releaseScheduledJobLease(leaseOwner, sched.pk, endState)
+      )
+        .catch(e => {
+          // The lease release failed.  This error isn't as important as
+          // the underlying original error...
+          if (isLeaseExitStateError(result)) {
+            messaging.emit('generalError', e)
+            throw result.error
+          }
+          // No "more important" error, so report this one.
+          throw e
+        })
+        .then(() => {
+          if (isLeaseExitStateError(result)) {
+            throw result.error
+          }
+          return result.value
+        })
+    })
 }
 
 
 /**
- * This currenty has no way to detect if it stole the lease.
+ * Runs an operation inside a lease.  This captures the lease, and, only if the lease
+ * capture is successful, it runs the lease then releases the lease.
+ *
+ * Only errors that, if thrown, would mask inner errors are reported to the events.
+ * All other errors are just rejected in the promise.
+ *
+ * NOTE this does not steal the lease.
  *
  * @param store
  * @param jobPk
@@ -165,7 +217,8 @@ export function runUpdateInLease<T>(
   jobPk: PrimaryKeyType,
   now: Date,
   leaseBehavior: LeaseBehavior,
-  withLease: (scheduledJob: ScheduledJobModel, leaseId: LeaseIdType) => Promise<T> | T
+  messaging: MessagingEventEmitter,
+  withLease: (scheduledJob: ScheduledJobModel, leaseId: LeaseIdType) => Promise<LeaseExitState<T>> | LeaseExitState<T>
 ): Promise<T> {
   const leaser = leaseBehavior.leaseOwnerStrategy()
   // Retry logic with a promise is weird...
@@ -186,58 +239,55 @@ export function runUpdateInLease<T>(
   // be in the catch() block, and if it passed, then the then() block has the result.
   return leaseAttemptPromise
     .then(() => store.getJob(jobPk))
-    .then(job => {
+    .then(sched => {
       logDebug('createScheduledJob', `after addScheduledJobModel succeeded`)
-      if (!job) {
+      if (!sched) {
         throw new ScheduledJobNotFoundError(jobPk)
       }
       // If the with-lease execution fails, then mark the update lease failure.
       // That means we need special handling just in here...
-      let t: Promise<T> | T
+      let t: Promise<LeaseExitState<T>> | LeaseExitState<T>
       try {
-        t = withLease(job, leaser)
+        t = withLease(sched, leaser)
       } catch (e) {
-        // Same as a catch...
-        return updateInLeaseFailed(store, leaser, jobPk)
-          // If the updateInLeaseFailed call fails, that error isn't
-          // important.
-          .catch(e2 => {
-            logNotificationError('updateInLeaseFailed caused problem after lease operation failed', e2)
-            throw e
-          })
-          .then(() => { throw e })
+        // The scheduled job must enter a needs-repair state.
+        t = {
+          error: e,
+          state: SCHEDULE_STATE_DISABLED
+        }
       }
-      if (t instanceof Promise) {
-        // TODO need to re-examine this situation.  It may be a different
-        // kind of state, or just released state.
-        return t
-          .catch(e => updateInLeaseFailed(store, leaser, jobPk)
-            // If the updateInLeaseFailed call fails, that error isn't
-            // important.
-            .catch(e2 => {
-              logNotificationError('updateInLeaseFailed caused problem after lease operation failed', e2)
+      if (!(t instanceof Promise)) {
+        t = Promise.resolve(t)
+      }
+      return t
+        // Catch the promise errors first, because the "then" condition
+        // can raise its own separate error.
+        .catch(e => (<LeaseExitStateError>{ error: e, state: SCHEDULE_STATE_REPAIR }))
+
+        // With successful update behavior, release the lease and return the result.
+        .then(result => {
+          const endState = result.state || SCHEDULE_STATE_ACTIVE
+          return (
+            endState === SCHEDULE_STATE_REPAIR
+              ? store.markLeasedScheduledJobNeedsRepair(sched.pk, now)
+              : store.releaseScheduledJobLease(leaser, sched.pk, endState)
+          )
+            .catch(e => {
+              // The lease release failed.  This error isn't as important as
+              // the underlying original error...
+              if (isLeaseExitStateError(result)) {
+                messaging.emit('generalError', e)
+                throw result.error
+              }
+              // No "more important" error, so report this one.
               throw e
             })
-            .then(() => { throw e })
-          )
-      } else {
-        // Everything's fine
-        return Promise.resolve(t)
-      }
+            .then(() => {
+              if (isLeaseExitStateError(result)) {
+                throw result.error
+              }
+              return result.value
+            })
+        })
     })
-    // With successful update behavior, release the lease and return the result.
-    .then(result => store
-      .releaseScheduledJobLease(leaser, jobPk, SCHEDULE_STATE_ACTIVE)
-      // Success all the way through.
-      .then(() => result)
-      // Error releasing the lease is normally propigated up.
-      // This will usually mean either a data store problem or
-      // something else already stole the lease.
-    )
-}
-
-function updateInLeaseFailed(store: DataStore, leaser: LeaseIdType, pk: PrimaryKeyType): Promise<void> {
-  // Only set the state to failed if it's alreday in the desired state.
-  return store
-    .failureDuringScheduledJobLease(leaser, pk)
 }

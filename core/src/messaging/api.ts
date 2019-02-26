@@ -14,11 +14,6 @@ import {
 
 
 export interface ScheduledJobEvents {
-  /**
-   * When a scheduled job is created or enabled, it can trigger listening
-   * events.
-   */
-  scheduledJobEnabled: (schedule: ScheduledJobModel) => void
   scheduledJobDisabled: (schedule: ScheduledJobModel) => void
 
   /**
@@ -26,14 +21,6 @@ export interface ScheduledJobEvents {
    * a broken state, and the corresponding task states must be repaired.
    */
   scheduledJobLeaseExpired: (schedule: ScheduledJobModel) => void
-
-  /**
-   * Triggers when the schedule's previously peeled task's initial
-   * execution time is up.  This is different than when the task
-   * runs, because there may be a difference between a task retrying
-   * its execution and when the next task is ready to be queued.
-   */
-  scheduledJobTaskCheck: (schedule: ScheduledJobModel) => void
 }
 
 export interface TaskEvents {
@@ -43,6 +30,8 @@ export interface TaskEvents {
    * Task execution time triggered.
    */
   taskReadyToExecute: (task: TaskModel) => void
+
+  taskRunning: (task: TaskModel, execId: ExecutionJobId) => void
 
   /**
    * The task has already been updated with the right finish state.

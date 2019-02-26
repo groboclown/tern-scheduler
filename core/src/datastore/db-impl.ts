@@ -12,8 +12,6 @@ import {
   OneOfConditional,
   ScheduledJobDataModel,
   TaskDataModel,
-  NotNullConditional,
-  NullConditional,
 } from './db-api'
 import {
   LeaseIdType,
@@ -27,7 +25,7 @@ import {
   SCHEDULE_MODEL_NAME,
   SCHEDULE_STATE_ACTIVE,
   SCHEDULE_STATE_DISABLED,
-  SCHEDULE_STATE_UPDATE_ERROR,
+  SCHEDULE_STATE_REPAIR,
   SCHEDULE_STATE_UPDATING,
 } from '../model/schedule'
 import {
@@ -96,19 +94,6 @@ export class DatabaseDataStore implements DataStore {
       })
   }
 
-  pollTaskableScheduledJobs(now: Date, limit: number): Promise<ScheduledJobModel[]> {
-    return this.db.find(SCHEDULE_MODEL_NAME, 0, limit, new OrConditional([
-      // Either the state is in a not-leased state
-      new EqualsConditional('state', SCHEDULE_STATE_ACTIVE),
-
-      // Or the state is in an expired lease state
-      new AndConditional([
-        new BeforeDateConditional('leaseExpires', now),
-        new EqualsConditional('state', SCHEDULE_STATE_UPDATING)
-      ])
-    ]))
-  }
-
   pollLeaseExpiredScheduledJobs(now: Date, limit: number): Promise<ScheduledJobModel[]> {
     return this.db.find(SCHEDULE_MODEL_NAME, 0, limit, new BeforeDateConditional('leaseExpires', now))
   }
@@ -118,7 +103,7 @@ export class DatabaseDataStore implements DataStore {
     return this.db
       // Stored as a ScheduledJobDataModel, but that's a subclass, so it will conform.
       .find<ScheduledJobModel>(SCHEDULE_MODEL_NAME, startIndex, limit + 1,
-        new OneOfConditional('state', [SCHEDULE_STATE_ACTIVE, SCHEDULE_STATE_UPDATE_ERROR, SCHEDULE_STATE_UPDATING]))
+        new OneOfConditional('state', [SCHEDULE_STATE_ACTIVE, SCHEDULE_STATE_REPAIR, SCHEDULE_STATE_UPDATING]))
       .then(rows => pageResults(rows, startIndex, limit))
   }
 
@@ -129,31 +114,6 @@ export class DatabaseDataStore implements DataStore {
       .find<ScheduledJobModel>(SCHEDULE_MODEL_NAME, startIndex, limit + 1,
         new EqualsConditional('state', SCHEDULE_STATE_DISABLED))
       .then(rows => pageResults(rows, startIndex, limit))
-  }
-
-  enableScheduledJob(job: ScheduledJobModel): Promise<boolean> {
-    return this.db
-      .conditionalUpdate<ScheduledJobModel>(SCHEDULE_MODEL_NAME, job.pk, {
-        state: SCHEDULE_STATE_ACTIVE
-      }, new EqualsConditional('state', SCHEDULE_STATE_DISABLED))
-      .then(updateCount => {
-        if (updateCount > 0) {
-          return Promise.resolve(true)
-        }
-
-        // Failure triggers can cause the query to not look right if someone steals
-        // the state between the initial conditional update and this query.
-        return this.db
-          .find<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, 0, 1,
-            new EqualsConditional(MODEL_PRIMARY_KEY, job.pk))
-          .then(jobs => {
-            if (jobs.length > 0) {
-              return Promise.resolve(false)
-            } else {
-              return Promise.reject(new ScheduledJobNotFoundError(job.pk))
-            }
-          })
-      })
   }
 
   disableScheduledJob(job: ScheduledJobModel, leaseId: LeaseIdType): Promise<boolean> {
@@ -194,6 +154,40 @@ export class DatabaseDataStore implements DataStore {
       .then(count => count > 0)
   }
 
+
+  stealExpiredLeaseForScheduledJob(
+    jobPk: PrimaryKeyType, newLeaseId: LeaseIdType,
+    now: Date, leaseTimeSeconds: number
+  ): Promise<void> {
+    const expires = updateDate(now, leaseTimeSeconds)
+    return this.db
+      .conditionalUpdate<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, jobPk, {
+        state: SCHEDULE_STATE_REPAIR,
+        leaseOwner: newLeaseId,
+        leaseExpires: expires,
+      }, new AndConditional([
+        new EqualsConditional('state', SCHEDULE_STATE_UPDATING),
+        new BeforeDateConditional('leaseExpires', now),
+      ]))
+      .then(count => {
+        if (count > 0) {
+          return Promise.resolve()
+        }
+        // Failure triggers can cause the query to not look right if someone steals
+        // the state between the initial conditional update and this query.
+        return this.db
+          .find<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, 0, 1, new EqualsConditional(MODEL_PRIMARY_KEY, jobPk))
+          .then(jobs => {
+            if (jobs.length > 0) {
+              return Promise.reject(new LeaseNotObtainedError(newLeaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
+            } else {
+              return Promise.reject(new ScheduledJobNotFoundError(jobPk))
+            }
+          })
+      })
+  }
+
+
   leaseScheduledJob(jobPk: PrimaryKeyType, leaseId: LeaseIdType, now: Date, leaseTimeSeconds: number): Promise<void> {
     const expires = updateDate(now, leaseTimeSeconds)
     return this.db
@@ -201,16 +195,8 @@ export class DatabaseDataStore implements DataStore {
         state: SCHEDULE_STATE_UPDATING,
         leaseOwner: leaseId,
         leaseExpires: expires,
-      }, new OrConditional([
-        // Either the value is active, waiting to be leased
-        new EqualsConditional('state', SCHEDULE_STATE_ACTIVE),
-
-        // or it has an expired lease.
-        new AndConditional([
-          new EqualsConditional('state', SCHEDULE_STATE_UPDATING),
-          new BeforeDateConditional('leaseExpires', now)
-        ])
-      ]))
+        // No check if the lease is expired.
+      }, new EqualsConditional('state', SCHEDULE_STATE_ACTIVE))
       .then(count => {
         if (count > 0) {
           return Promise.resolve()
@@ -232,7 +218,7 @@ export class DatabaseDataStore implements DataStore {
   releaseScheduledJobLease(
     leaseId: string,
     jobPk: PrimaryKeyType,
-    releaseState: SCHEDULE_STATE_DISABLED | SCHEDULE_STATE_UPDATE_ERROR | SCHEDULE_STATE_ACTIVE
+    releaseState: SCHEDULE_STATE_DISABLED | SCHEDULE_STATE_ACTIVE
   ): Promise<void> {
     return this.db
       .conditionalUpdate<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, jobPk, {
@@ -261,15 +247,23 @@ export class DatabaseDataStore implements DataStore {
       })
   }
 
-  failureDuringScheduledJobLease(leaseId: LeaseIdType, jobPk: PrimaryKeyType): Promise<void> {
+  repairExpiredLeaseForScheduledJob(
+    jobPk: PrimaryKeyType,
+    newLeaseId: LeaseIdType,
+    now: Date,
+    leaseTimeSeconds: number
+  ): Promise<void> {
+    const expires = updateDate(now, leaseTimeSeconds)
     return this.db
       .conditionalUpdate<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, jobPk, {
-        state: SCHEDULE_STATE_UPDATE_ERROR,
-        leaseOwner: null,
-        leaseExpires: null
+        state: SCHEDULE_STATE_DISABLED,
+        // Set the lease owner to something that couldn't be leased
+        leaseOwner: newLeaseId,
+        // It expired in the past.
+        leaseExpires: expires
       }, new AndConditional([
-        new EqualsConditional('state', SCHEDULE_STATE_UPDATING),
-        new EqualsConditional('leaseOwner', leaseId)
+        new OneOfConditional('state', [SCHEDULE_STATE_UPDATING, SCHEDULE_STATE_REPAIR]),
+        new BeforeDateConditional('leaseExpires', now)
       ]))
       .then(count => {
         if (count > 0) {
@@ -281,7 +275,7 @@ export class DatabaseDataStore implements DataStore {
           .find<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, 0, 1, new EqualsConditional(MODEL_PRIMARY_KEY, jobPk))
           .then(jobs => {
             if (jobs.length > 0) {
-              return Promise.reject(new LeaseNotOwnedError(leaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
+              return Promise.reject(new LeaseNotObtainedError(newLeaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
             } else {
               return Promise.reject(new ScheduledJobNotFoundError(jobPk))
             }
@@ -289,20 +283,15 @@ export class DatabaseDataStore implements DataStore {
       })
   }
 
-  setNextTaskExecutionTime(leaseId: LeaseIdType, jobPk: PrimaryKeyType, execTime: Date): Promise<boolean> {
+
+  markLeasedScheduledJobNeedsRepair(jobPk: PrimaryKeyType, now: Date): Promise<void> {
     return this.db
       .conditionalUpdate<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, jobPk, {
-        lastTaskExecutionDate: execTime
-      }, new AndConditional([
-        new EqualsConditional('leaseOwner', leaseId),
-        new OrConditional([
-          new NullConditional('lastTaskExecutionDate'),
-          new BeforeDateConditional('lastTaskExecutionDate', execTime)
-        ])
-      ]))
+        leaseExpires: now
+      }, new EqualsConditional('state', SCHEDULE_STATE_UPDATING))
       .then(count => {
         if (count > 0) {
-          return Promise.resolve(true)
+          return Promise.resolve()
         }
         // Failure triggers can cause the query to not look right if someone steals
         // the state between the initial conditional update and this query.
@@ -310,9 +299,7 @@ export class DatabaseDataStore implements DataStore {
           .find<ScheduledJobDataModel>(SCHEDULE_MODEL_NAME, 0, 1, new EqualsConditional(MODEL_PRIMARY_KEY, jobPk))
           .then(jobs => {
             if (jobs.length > 0) {
-              // Could just be that the last execution time wasn't right, or that
-              // the lease was stolen.
-              return Promise.resolve(false)
+              return Promise.reject(new LeaseNotOwnedError('<unknown>', jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
             } else {
               return Promise.reject(new ScheduledJobNotFoundError(jobPk))
             }

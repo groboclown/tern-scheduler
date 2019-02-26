@@ -115,6 +115,7 @@ export class TernScheduler implements AllStrategies {
   private readonly jobExecution: JobExecutionManager
   private readonly leaseBehavior: LeaseBehavior
   private readonly registerPollCallback: RegisterPollCallback
+  private readonly runningCallbacks: { [id: string]: (() => void) } = {}
 
   private active: boolean = true
 
@@ -157,10 +158,18 @@ export class TernScheduler implements AllStrategies {
 
     this.registerPollCallback = (delaySeconds, callback) => {
       if (this.active) {
+        const id = this.createPrimaryKeyStrategy()
+        this.runningCallbacks[id] = callback
         setTimeout(() => {
           if (this.active) {
-            callback()
+            // TODO error trapping
+            try {
+              callback()
+            } catch (e) {
+              this.messaging.emit('generalError', e)
+            }
           }
+          delete this.runningCallbacks[id]
         }, delaySeconds * MILLISECONDS_PER_SECOND)
       }
     }

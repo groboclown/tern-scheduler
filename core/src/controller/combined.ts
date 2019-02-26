@@ -1,9 +1,10 @@
 
 import {
-  createScheduledJob,
+  createScheduledJobAlone,
   runUpdateInLease,
   LeaseBehavior,
   NewScheduledJob,
+  LeaseExitStateValue,
 } from './schedule'
 
 import {
@@ -44,7 +45,18 @@ import { ScheduledJobNotFoundError, LeaseNotObtainedError, TernError } from '../
 import { logDebug, logInfo } from '../logging';
 import { TaskNotFoundError } from '../errors/controller-errors';
 import { RetryTaskStrategyRegistry } from '../strategies/retry';
+import { isTaskCreationStrategyAfterCreation, isTaskCreationStrategyAfterStart, isTaskCreationDisable, isTaskCreationQueue, isTaskCreationStrategyAfterFinish } from '../strategies/task-creation/api';
+import { SCHEDULE_STATE_DISABLED } from '../model/schedule';
 
+
+/**
+ * How many tasks to query for running state to see if there's a duplicate
+ * running task, before starting a new one.
+ *
+ * TODO should this be configurable?  Should never allow capturing all of them,
+ * in case of weird issues in the service.
+ */
+const DUPLICATE_RUNNING_TASK_LIMIT = 100
 
 // Functions that still perform at the controller level, but need to coordinate the operation
 // between the different model parts.
@@ -52,7 +64,7 @@ import { RetryTaskStrategyRegistry } from '../strategies/retry';
 /**
  * Creates the schedule and the first task.
  */
-export function createSchedule(
+export function createScheduledJob(
   store: DataStore,
   schedule: NewScheduledJob,
   leaseBehavior: LeaseBehavior,
@@ -61,38 +73,37 @@ export function createSchedule(
   taskCreationReg: TaskCreationStrategyRegistry,
   messaging: MessagingEventEmitter
 ): Promise<ScheduledJobModel> {
-  return createScheduledJob(
+  return createScheduledJobAlone(
     store,
     schedule,
     now,
     leaseBehavior,
     createPrimaryKeyStrat,
-    (job) => {
-      messaging.emit('scheduledJobEnabled', job)
-      const taskRunDate = taskCreationReg.get(schedule.taskCreationStrategy)
-        .createFromNewSchedule(now, job)
-      if (taskRunDate) {
-        const task: TaskModel = {
-          pk: createPrimaryKeyStrat(),
-          schedule: job.pk,
-          createdOn: now,
-          state: TASK_STATE_PENDING,
-          executeAt: taskRunDate,
-          executionJobId: null,
-          retryIndex: 0,
-          completedInfo: null,
-          executionQueued: null,
-          executionStarted: null,
-          executionFinished: null,
-        }
-        return store.addTask(task)
-          .then(() => {
-            messaging.emit('taskCreated', task)
-            return job
-          })
-      } else {
-        return Promise.resolve(job)
+    messaging,
+    (sched) => {
+      const strat = taskCreationReg.get(schedule.taskCreationStrategy)
+      const taskRunDate = strat.createFromNewSchedule(now, sched)
+      // A task item must always be created when a scheduled job is
+      // created.
+      const task: TaskModel = {
+        pk: createPrimaryKeyStrat(),
+        schedule: sched.pk,
+        createdOn: now,
+        state: TASK_STATE_PENDING,
+        executeAt: taskRunDate,
+        executionJobId: null,
+        retryIndex: 0,
+        completedInfo: null,
+        executionQueued: null,
+        executionStarted: null,
+        executionFinished: null,
+        nextTimeoutCheck: null,
       }
+      return store.addTask(task)
+        .then(() => {
+          messaging.emit('taskCreated', task)
+          return { value: sched }
+        })
     })
 }
 
@@ -111,6 +122,9 @@ export function createTaskForSchedule(
   duplicateTaskReg: DuplicateTaskStrategyRegistry,
   messaging: MessagingEventEmitter
 ): Promise<void> {
+  // FIXME this method needs to be removed.  Instead, this checking must be done inside the other
+  // schedule lifecycle checks.  The task creation is done when a task finishes with no more
+  // retries, a task starts running, or a scheduled job is created.
   const task: TaskModel = {
     pk: createPrimaryKeyStrat(),
     schedule: schedule.pk,
@@ -123,38 +137,35 @@ export function createTaskForSchedule(
     executionQueued: null,
     executionStarted: null,
     executionFinished: null,
+    nextTimeoutCheck: null,
   }
-  return runUpdateInLease(store, schedule.pk, now, lease, (job, leaseId) => {
-    // Check the job execution time again; if it's after date,
-    // then that means between the time when we found the job and obtained the
-    // lease and started running this function, something else did this work.
-    if (job.lastTaskExecutionDate && job.lastTaskExecutionDate > now) {
-      // Something else did it for us.
-      logInfo('createTaskForSchedule', `Attempted to create task for ${schedule.pk}, but it was created for us`)
-      return
-    }
-
+  return runUpdateInLease(store, schedule.pk, now, lease, messaging, (job, leaseId) => {
     // Check if there's another task already in queued or running state
     // for this schedule.  If so, run duplicate strategy logic.
     return store
-      .getActiveTasksForScheduledJob(job, 10)
+      .getActiveTasksForScheduledJob(job, DUPLICATE_RUNNING_TASK_LIMIT)
       .then(activeTasks => {
         if (activeTasks.length > 0) {
           const strat = duplicateTaskReg.get(job.duplicateStrategy)(job, activeTasks, task)
           if (strat === DUPLICATE_TASK_SKIP_NEW) {
             logInfo('createTaskForSchedule', `Skipping creating new task for schedule ${schedule.pk}`)
-            return Promise.resolve()
+            return Promise.resolve({
+              value: null
+            })
           }
         }
         // Otherwise, create the task
         return store.addTask(task)
-          // and set the job's execute value to the task run date.
-          .then(() => store.setNextTaskExecutionTime(leaseId, job.pk, taskRunDate))
           .then(() => {
             messaging.emit('taskCreated', task)
+            return {
+              value: null
+            }
           })
       })
   })
+    // Ensure we return no value
+    .then(() => { })
 }
 
 /**
@@ -168,13 +179,20 @@ export function startTask(
   leaseBehavior: LeaseBehavior,
   now: Date,
   startJob: StartJob,
+  taskCreationReg: TaskCreationStrategyRegistry,
   currentTimeUTC: CurrentTimeUTCStrategy,
+  createPrimaryKeyStrat: CreatePrimaryKeyStrategy,
+  // TODO include timeouts for queue and run times?  Should those be part of the job framework (thus the messaging)?
+  messaging: MessagingEventEmitter
 ): Promise<void> {
-  return runUpdateInLease(store, task.schedule, now, leaseBehavior, (job) =>
+  return runUpdateInLease(store, task.schedule, now, leaseBehavior, messaging, (sched): Promise<LeaseExitStateValue<null>> =>
     store
+      // FIXME should the queue call include the set long time check date?
       .markTaskQueued(task, now)
       .then(() =>
-        startJob(task.pk, job.jobName, job.jobContext)
+        // THe only external system we're allowed to call while we have a
+        // scheduled job lease.
+        startJob(task.pk, sched.jobName, sched.jobContext)
           .catch(e =>
             // request to start the job failed.  This is different than the
             // job just failing; this means the job framework just couldn't
@@ -187,8 +205,45 @@ export function startTask(
       .then((execId) =>
         store
           .markTaskStarted(task, currentTimeUTC(), execId)
+          .then(() => execId)
       )
+      .then(execId => {
+        messaging.emit('taskRunning', task, execId)
+      })
+      .then(() => {
+        // Check the job if a new task should be created.
+        const taskCreationStrategy = taskCreationReg.get(sched.taskCreationStrategy)
+        if (isTaskCreationStrategyAfterStart(taskCreationStrategy)) {
+          const taskRunDate = taskCreationStrategy.createAfterTaskStarts(now, sched)
+          if (isTaskCreationDisable(taskRunDate)) {
+            return Promise.resolve({ value: null, state: SCHEDULE_STATE_DISABLED })
+          }
+          const task: TaskModel = {
+            pk: createPrimaryKeyStrat(),
+            schedule: sched.pk,
+            createdOn: now,
+            state: TASK_STATE_PENDING,
+            executeAt: taskRunDate.runAt,
+            executionJobId: null,
+            retryIndex: 0,
+            completedInfo: null,
+            executionQueued: null,
+            executionStarted: null,
+            executionFinished: null,
+            nextTimeoutCheck: null,
+          }
+          return store.addTask(task)
+            .then(() => {
+              messaging.emit('taskCreated', task)
+              return { value: null }
+            })
+        }
+        // Nothing to run
+        return { value: null }
+      })
   )
+    // Make sure we return void
+    .then(() => { })
 }
 
 
@@ -208,7 +263,9 @@ export function taskFinished(
   result: JobExecutionState,
   now: Date,
   lease: LeaseBehavior,
+  createPrimaryKeyStrat: CreatePrimaryKeyStrategy,
   retryReg: RetryTaskStrategyRegistry,
+  taskCreationReg: TaskCreationStrategyRegistry,
   duplicateTaskReg: DuplicateTaskStrategyRegistry,
   messaging: MessagingEventEmitter
 ): Promise<void> {
@@ -221,16 +278,46 @@ export function taskFinished(
       if (!task) {
         throw new TaskNotFoundError(execJobId)
       }
-      return runUpdateInLease(store, task.schedule, now, lease, (job, leaseId) => {
+      return runUpdateInLease(store, task.schedule, now, lease, messaging, (sched, leaseId): Promise<LeaseExitStateValue<null>> => {
         if (isJobExecutionStateFailed(result)) {
           return store
             .markTaskFailed(task, now, TASK_STATE_STARTED, TASK_STATE_COMPLETE_ERROR, result.result)
-            .then(() => {
+            .then((): Promise<LeaseExitStateValue<null>> => {
               // Handle retry
-              const retryInSeconds = retryReg.get(job.retryStrategy)(job, task, result.result)
+              const retryInSeconds = retryReg.get(sched.retryStrategy)(sched, task, result.result)
               if (retryInSeconds === null) {
-                // no retry
-                return Promise.resolve(null)
+                // No retry.  May need to queue up another task.
+                const taskCreationStrategy = taskCreationReg.get(sched.taskCreationStrategy)
+                if (isTaskCreationStrategyAfterFinish(taskCreationStrategy)) {
+                  const taskRunDate = taskCreationStrategy.createAfterTaskFinishes(now, sched)
+                  if (isTaskCreationDisable(taskRunDate)) {
+                    return Promise.resolve(<LeaseExitStateValue<null>>{ value: null, state: SCHEDULE_STATE_DISABLED })
+                  }
+                  const newTask: TaskModel = {
+                    pk: createPrimaryKeyStrat(),
+                    schedule: sched.pk,
+                    createdOn: now,
+                    state: TASK_STATE_PENDING,
+                    executeAt: taskRunDate.runAt,
+                    executionJobId: null,
+                    retryIndex: 0,
+                    completedInfo: null,
+                    executionQueued: null,
+                    executionStarted: null,
+                    executionFinished: null,
+                    nextTimeoutCheck: null,
+                  }
+                  return store.addTask(newTask)
+                    .then(() => {
+                      // A new task was created, and the old task completed.
+                      messaging.emit('taskCreated', newTask)
+                      messaging.emit('taskFinished', task)
+                      return { value: null }
+                    })
+                }
+                // Nothing to run after task finished, but the task did finish.
+                messaging.emit('taskFinished', task)
+                return Promise.resolve({ value: null })
               }
               // Queue a retry task
               // Retry time is based on when the task was discovered to be failed,
@@ -240,73 +327,78 @@ export function taskFinished(
               // Check if there's another task already in queued or running state
               // for this schedule.  If so, run duplicate strategy logic.
               return store
-                .getActiveTasksForScheduledJob(job, 10)
+                .getActiveTasksForScheduledJob(sched, DUPLICATE_RUNNING_TASK_LIMIT)
                 .then(activeTasks => {
                   if (activeTasks.length > 0) {
-                    const strat = duplicateTaskReg.get(job.duplicateStrategy)(job, activeTasks, task)
+                    const strat = duplicateTaskReg.get(sched.duplicateStrategy)(sched, activeTasks, task)
                     if (strat === DUPLICATE_TASK_SKIP_NEW) {
-                      logInfo('createTaskForSchedule', `Skipping creating new task on retry for schedule ${job.pk}`)
-                      return Promise.resolve(null)
+                      logInfo('createTaskForSchedule', `Skipping creating new task on retry for schedule ${sched.pk}`)
+                      // In this case, retry is not triggered.  So, we complete the task.
+                      messaging.emit('taskFinished', task)
+                      return Promise.resolve({ value: null })
                     }
+                    // else the duplicate running tasks don't inhibit retrying.
                   }
-                  // Otherwise, create the task
-                  return store.addTask(task)
-                    // and set the job's execute value to the task run date.
-                    .then(() => store.setNextTaskExecutionTime(leaseId, job.pk, retryTime))
+                  // else, no active tasks, so no conflict.
+                  const newTask: TaskModel = {
+                    pk: createPrimaryKeyStrat(),
+                    schedule: sched.pk,
+                    createdOn: now,
+                    state: TASK_STATE_PENDING,
+                    executeAt: retryTime,
+                    executionJobId: null,
+                    retryIndex: 0,
+                    completedInfo: null,
+                    executionQueued: null,
+                    executionStarted: null,
+                    executionFinished: null,
+                    nextTimeoutCheck: null,
+                  }
+                  return store.addTask(newTask)
                     .then(() => {
-                      messaging.emit('taskCreated', task)
-                      return task
+                      // A new task was created, and the old task completed.
+                      messaging.emit('taskCreated', newTask)
+                      messaging.emit('taskFinished', task)
+                      return { value: null }
                     })
                 })
             })
         } else if (isJobExecutionStateCompleted(result)) {
           return store
             .markTaskCompleted(task, now, result.result)
-            .then(() => task)
+            .then(() => {
+              messaging.emit('taskFinished', task)
+              return { value: null }
+            })
         } else {
           return Promise.reject(new TernError(`invalid job execution state ${JSON.stringify(result)}`))
         }
       })
     })
-    .then(task => {
-      if (task) {
-        messaging.emit('taskFinished', task)
-      }
-    })
+    // make sure we return void
+    .then(() => { })
 }
 
 
-export function enableSchedule(
-  store: DataStore,
-  schedule: ScheduledJobModel,
-  now: Date,
-  leaseBehavior: LeaseBehavior,
-  messaging: MessagingEventEmitter
-): Promise<boolean> {
-  return store.enableScheduledJob(schedule)
-    .then(enabled => {
-      if (enabled) {
-        messaging.emit('scheduledJobEnabled', schedule)
-      }
-      return enabled
-    })
-}
-
-
+/**
+ * Get the lease and disable the scheduled job.
+ *
+ * @param store
+ * @param schedule
+ * @param now
+ * @param leaseBehavior
+ * @param messaging
+ */
 export function disableSchedule(
   store: DataStore,
   schedule: ScheduledJobModel,
   now: Date,
   leaseBehavior: LeaseBehavior,
   messaging: MessagingEventEmitter
-): Promise<boolean> {
-  return runUpdateInLease(store, schedule.pk, now, leaseBehavior, (job, leaseId) => {
-    return store.disableScheduledJob(job, leaseId)
-      .then(disabled => {
-        if (disabled) {
-          messaging.emit('scheduledJobDisabled', job)
-        }
-        return disabled
-      })
+): Promise<void> {
+  return runUpdateInLease(store, schedule.pk, now, leaseBehavior, messaging, (sched, leaseId) => {
+    return { value: null, state: SCHEDULE_STATE_DISABLED }
   })
+    // Ensure we return void
+    .then(() => { })
 }

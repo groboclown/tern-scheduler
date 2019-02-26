@@ -50,37 +50,73 @@ export function wireDataStore(
       // Standard log handling.  End users can monitor this in their own way.
       logCriticalError(e)
     })
-    .on('scheduledJobEnabled', schedule => {
-      // Perform a task start check.  May be done by polling or other places,
-      // but the create task check will need to be run due to this event.
-      const now = currentTimeUTC()
-      if (schedule.lastTaskExecutionDate && schedule.lastTaskExecutionDate < now) {
-        messaging.emit('scheduledJobTaskCheck', schedule)
-      }
-    })
     .on('scheduledJobLeaseExpired', schedule => {
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
+      // FIXME need to handle fixing expired job leases.
       // FIXME need to handle fixing expired job leases.
       logNotificationError(`scheduled job expired: ${schedule.pk}`, null)
     })
-    .on('scheduledJobTaskCheck', schedule => {
-      const now = currentTimeUTC()
-      const execAt = taskCreationReg.get(schedule.taskCreationStrategy).createOnPoll(now, schedule)
-      if (execAt !== null) {
-        createTaskForSchedule(store, schedule, now, leaseBehavior, execAt, createPrimaryKeyStrat, 0, duplicateReg, messaging)
-          .catch(e => {
-            messaging.emit('generalError', e)
-          })
-      }
-    })
     .on('taskReadyToExecute', task => {
       const now = currentTimeUTC()
-      startTask(store, task, leaseBehavior, now, jobExecutor.startJob, currentTimeUTC)
+      startTask(
+        store, task, leaseBehavior, now,
+        jobExecutor.startJob, taskCreationReg, currentTimeUTC,
+        createPrimaryKeyStrat, messaging
+      )
         .catch(e => {
           messaging.emit('generalError', e)
         })
     })
+    .on('taskExecutingLong', task => {
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      logNotificationError(`task execution took too long: ${task.pk}`, null)
+    })
+    .on('taskQueuedLong', task => {
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      // FIXME inspect the task for repair
+      logNotificationError(`task queue took too long: ${task.pk}`, null)
+    })
     .on('jobExecutionFinished', (execId, result) => {
       const now = currentTimeUTC()
-      taskFinished(store, execId, result, now, leaseBehavior, retryReg, duplicateReg, messaging)
+      taskFinished(
+        store, execId, result, now, leaseBehavior, createPrimaryKeyStrat, retryReg, taskCreationReg, duplicateReg, messaging
+      )
+        .catch(e => {
+          messaging.emit('generalError', e)
+        })
     })
 }
