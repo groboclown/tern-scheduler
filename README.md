@@ -1,5 +1,7 @@
 # Tern - That Flocking Scheduler
 
+[![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
+
 Tern aims to be a cluster-friendly scheduling service, able to provide reliability and high availability in the scheduling service.
 
 It can run as an add-in library, a stand-alone application, or as a REST API application running with Express.

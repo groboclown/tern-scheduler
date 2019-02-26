@@ -1,6 +1,10 @@
 
+
 # Basic Node Stuff
 node_modules/
+
+# Lerna stuff
+lerna-debug.log
 
 # TSC stuff
 dist/

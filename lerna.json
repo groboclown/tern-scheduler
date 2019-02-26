@@ -1,0 +1,20 @@
+{
+  "packages": [
+    "packages/*",
+    "test"
+  ],
+  "version": "0.0.1",
+  "npmClient": "npm",
+  "command": {
+    "publish": {
+      "ignoreChanges": [
+        "ignored-file", "*.md"
+      ],
+      "message": "chore(release): publish",
+      "scope": "@tern-scheduler"
+    },
+    "bootstrap": {
+      "npmClientArgs": ["--no-package-lock"]
+    }
+  }
+}

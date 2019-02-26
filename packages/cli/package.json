@@ -1,0 +1,19 @@
+{
+  "name": "cli",
+  "version": "0.0.1",
+  "description": "Basic Stand-Alone service for the Tern Task Scheduler Service for Node",
+  "main": "index.js",
+  "scripts": {
+    "test": "exit 1"
+  },
+  "keywords": [
+    "scheduler",
+    "node",
+    "nodejs"
+  ],
+  "author": "Groboclown",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^3.3.3"
+  }
+}

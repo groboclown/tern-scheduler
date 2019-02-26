@@ -1,0 +1,36 @@
+{
+  "name": "core",
+  "version": "0.0.1",
+  "description": "Task Scheduler Service for Node",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "node_modules/.bin/tsc",
+    "test": "node_modules/.bin/mocha --require ts-node/register \"./src/**/__mocha__/*.tests.ts\"",
+    "#test:watch": "See https://github.com/mochajs/mocha/issues/3748 for bugs with the watch expression and ts-node",
+    "test:watch": "node_modules/.bin/mocha --require ts-node/register --reporter min --watch \"./src/**/__mocha__/*.tests.ts\""
+  },
+  "keywords": [
+    "scheduler",
+    "node",
+    "nodejs"
+  ],
+  "author": "Groboclown",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.6",
+    "@types/node": "^11.9.4",
+    "@types/sinon": "^7.0.6",
+    "chai": "^4.2.0",
+    "mocha": "^6.0.1",
+    "sinon": "^7.2.4",
+    "ts-node": "^8.0.2",
+    "typescript": "^3.3.3"
+  },
+  "dependencies": {
+    "@types/uuid": "^3.4.4",
+    "strict-event-emitter-types": "^2.0.0",
+    "uuid": "^3.3.2"
+  },
+  "mocha": {}
+}
