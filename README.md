@@ -93,7 +93,7 @@ The library must create globally unique IDs per attempt to obtain a lease on a s
 
 #### Lease Time
 
-The time to allow for each lease operation to run.  If the operation with the lease takes longer than this, then the scheduled job is considered "expired" and must be repaired.  The lease time helps mitigate problems with [partial failure](https://en.wikipedia.org/wiki/Fault_tolerance) ![extern](./site/img/extern.svg)
+The time to allow for each lease operation to run.  If the operation with the lease takes longer than this, then the scheduled job is considered "expired" and must be repaired.  The lease time helps mitigate problems with [partial failure](https://en.wikipedia.org/wiki/Fault_tolerance)![extern](./site/img/extern.svg)
 
 #### Poll Wait Time
 
@@ -131,7 +131,7 @@ In order for the system to handle failure conditions, the executing jobs are put
 
 The server that handled the state change creates a message that indicates the state change.  The messages are not necessary for the operation of the service, but are there for the benefit of system architects that want to integrate the service with their solution.
 
-The implementation uses a variation on the [two-phase commit protocol](https://en.wikipedia.org/wiki/Two-phase_commit_protocol) with lease expiration to allow for recovering from failed nodes.  Additionally, attempts to obtain the lock have retry mechanisms with an eventual failure.  Locks are made on the scheduled job to perform operations on the scheduled job itself or on its child task objects (with a few rare and well considered exceptions).
+The implementation uses a variation on the [two-phase commit protocol](https://en.wikipedia.org/wiki/Two-phase_commit_protocol)![extern](./site/img/extern.svg) with lease expiration to allow for recovering from failed nodes.  Additionally, attempts to obtain the lock have retry mechanisms with an eventual failure.  Locks are made on the scheduled job to perform operations on the scheduled job itself or on its child task objects (with a few rare and well considered exceptions).
 
 1. Commit request phase
   * In this phase, a process (a thread of behavior within a node) makes an atomic conditional write operation to the data store to allocate the lock.  If the lock is already allocated, the request fails.  Note that this takes advantage of whatever locking mechanism the underlying data store has.
