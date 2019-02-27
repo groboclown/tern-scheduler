@@ -1,7 +1,6 @@
 
 export {
   pollScheduledJobsForExpiredLeases,
-  pollScheduledJobsForTaskCreation,
 } from './poll-schedule'
 
 export {

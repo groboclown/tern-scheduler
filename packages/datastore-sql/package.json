@@ -1,7 +1,7 @@
 {
-  "name": "@tern-scheduler/datastore-sqlserver",
+  "name": "@tern-scheduler/datastore-sql",
   "version": "0.0.1",
-  "description": "Microsoft SQL Server datastore back end for the Tern Scheduler",
+  "description": "Generic SQL datastore back end for the Tern Scheduler",
   "main": "src/index.js",
   "scripts": {
     "build": "",
@@ -36,7 +36,10 @@
     "typescript": "^3.3.3"
   },
   "dependencies": {
-    "mssql": "^4.3.2"
+    "@tern-scheduler/core": "file:../core",
+    "reflect-metadata": "^0.1.13",
+    "sequelize": "^4.42.0",
+    "sequelize-typescript": "^0.6.7"
   },
   "mocha": {}
 }

@@ -4,7 +4,9 @@
         "./src/**/*"
     ],
     "compilerOptions": {
-        "outDir": "../../dist/@tern-scheduler/core"
+      "experimentalDecorators": true,
+      "emitDecoratorMetadata": true,
+      "outDir": "../../dist/@tern-scheduler/datastore-sql"
     },
     "exclude": [
         "node_modules",

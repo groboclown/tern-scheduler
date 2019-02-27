@@ -33,6 +33,40 @@ The following are anti-goals for the project:
 
 Tern Scheduler is primarily a scheduling library ("tern-core") along with additional libraries to help you tie it together into a usable tool.  This means, as an end user, you'll need to make some decisions about how you want to connect it all up.
 
+The basic usage pattern flows like:
+
+```(typescript)
+import { TernScheduler } from '@tern-scheduler/core'
+
+const scheduler = new TernScheduler({
+    // You will need to find a datastore implementation that
+    // matches your needs.  See below for more details.
+    store: creteMyDataStore(),
+
+    // You will need to provide a way to connect your job
+    // execution framework with Tern.  See below for more details.
+    jobExecution: createMyJobExecutionManager(),
+
+    // Allows for different ways to poll for different actions.
+    generatePollWaitTimesStrategy: createMyGeneratePollWaitTimesStrategy(),
+
+    // Defines how long to wait to retry if a lease is owned by another
+    // process, and also how many times to retry.
+    retryLeaseTimeStrategy: createMyLeaseRetryTimeInSecondsStrategy(),
+
+    // You should provide the time to allow the datastore access +
+    // the job execution framework to fire a job.  Default is
+    // 300 seconds (5 minutes).
+    leaseTimeSeconds: 10
+});
+
+// When complete, this call will cause all the polling methods to
+// drain out before quitting.
+scheduler.stop()
+```
+
+If you really need to, there are additional default strategies you can override.  Those are described, again, below.
+
 
 ### What Are We Talking About
 

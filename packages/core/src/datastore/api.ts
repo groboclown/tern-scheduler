@@ -14,7 +14,6 @@ import {
 import {
   SCHEDULE_STATE_DISABLED,
   SCHEDULE_STATE_ACTIVE,
-  SCHEDULE_STATE_REPAIR
 } from '../model/schedule'
 import {
   ExecutionJobId

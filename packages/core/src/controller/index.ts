@@ -9,6 +9,5 @@ export {
   createScheduledJob as createSchedule,
   startTask,
   taskFinished,
-  enableSchedule,
   disableSchedule,
 } from './combined'

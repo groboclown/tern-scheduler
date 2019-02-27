@@ -1,6 +1,5 @@
 {
     "compilerOptions": {
-        "outDir": "./dist",
         "module": "commonjs",
         "target": "es2015",
         "sourceMap": true,
@@ -10,6 +9,7 @@
         "noFallthroughCasesInSwitch": true,
         "strictNullChecks": true,
         "strict": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "noUnusedLocals": true
     }
 }

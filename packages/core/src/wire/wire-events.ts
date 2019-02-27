@@ -6,7 +6,6 @@ import {
   startTask,
   taskFinished,
   LeaseBehavior,
-  createTaskForSchedule,
 } from '../controller'
 import {
   MessagingEventEmitter

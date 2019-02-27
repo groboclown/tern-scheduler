@@ -13,7 +13,6 @@ export {
   pollLongExecutingTasks,
   pollLongQueuedTasks,
   pollScheduledJobsForExpiredLeases,
-  pollScheduledJobsForTaskCreation,
   pollTaskReadyToExecute,
 } from './wire'
 
@@ -76,7 +75,6 @@ import {
   GeneratePollWaitTimesStrategy,
   TaskCreationStrategyRegistry,
   DuplicateTaskStrategyRegistry,
-  RetryTaskStrategy,
   RetryTaskStrategyRegistry,
   RegisterPollCallback,
   CreateLeaseRetryTimeInSecondsStrategy,
@@ -96,7 +94,6 @@ import {
   pollLongExecutingTasks,
   pollLongQueuedTasks,
   pollScheduledJobsForExpiredLeases,
-  pollScheduledJobsForTaskCreation,
   pollTaskReadyToExecute,
 } from './wire'
 import {
@@ -105,6 +102,7 @@ import {
 import { registerAlwaysRunDuplicateTaskStrategy, registerAlwaysSkipDuplicateTaskStrategy } from './strategies/duplicate-task';
 
 const MILLISECONDS_PER_SECOND = 1000
+const DEFAULT_LEASE_TIME_SECONDS = 300
 
 /**
  * A public facing facade on top of all the fun stuff in the scheduler.
@@ -132,22 +130,29 @@ export class TernScheduler implements AllStrategies {
   constructor(args: {
     store: DataStore
     jobExecution: JobExecutionManager
-    createLeaseTimeInSecondsStrategy: CreateLeaseTimeInSecondsStrategy
     generatePollWaitTimesStrategy: GeneratePollWaitTimesStrategy
     retryLeaseTimeStrategy: CreateLeaseRetryTimeInSecondsStrategy
 
     createPrimaryKeyStrategy?: CreatePrimaryKeyStrategy
     createLeaseIdStrategy?: CreateLeaseIdStrategy
     currentTimeUTCStrategy?: CurrentTimeUTCStrategy
+    leaseTimeSeconds?: number
+    createLeaseTimeInSecondsStrategy?: CreateLeaseTimeInSecondsStrategy
   }) {
     this.store = args.store
     this.jobExecution = args.jobExecution
 
-    this.createLeaseTimeInSecondsStrategy = args.createLeaseTimeInSecondsStrategy
     this.generatePollWaitTimesStrategy = args.generatePollWaitTimesStrategy
     this.createPrimaryKeyStrategy = args.createPrimaryKeyStrategy || UUIDCreatePrimaryKeyStrategy
     this.createLeaseIdStrategy = args.createLeaseIdStrategy || UUIDCreateLeaseIdStrategy
     this.currentTimeUTCStrategy = args.currentTimeUTCStrategy || StandardTime
+    const leaseTimeSeconds = args.leaseTimeSeconds
+    this.createLeaseTimeInSecondsStrategy =
+      args.createLeaseTimeInSecondsStrategy
+        ? args.createLeaseTimeInSecondsStrategy
+        : typeof leaseTimeSeconds === 'number'
+          ? () => leaseTimeSeconds
+          : () => DEFAULT_LEASE_TIME_SECONDS
 
     this.taskCreationStrategyRegistry = createStrategyRegistry()
     this.duplicateTaskStrategyRegistry = createStrategyRegistry()
@@ -194,6 +199,10 @@ export class TernScheduler implements AllStrategies {
       this.createPrimaryKeyStrategy,
       this.currentTimeUTCStrategy
     )
+  }
+
+  stop(): void {
+    this.active = false
   }
 
   /**
@@ -252,19 +261,6 @@ export class TernScheduler implements AllStrategies {
    */
   pollScheduledJobsForExpiredLeases(): void {
     pollScheduledJobsForExpiredLeases(
-      this.store,
-      this.generatePollWaitTimesStrategy,
-      this.currentTimeUTCStrategy,
-      this.registerPollCallback,
-      this.messaging
-    )
-  }
-
-  /**
-   * Monitor for when a scheduled job should have a new task "peeled" off.
-   */
-  pollScheduledJobsForTaskCreation(): void {
-    pollScheduledJobsForTaskCreation(
       this.store,
       this.generatePollWaitTimesStrategy,
       this.currentTimeUTCStrategy,

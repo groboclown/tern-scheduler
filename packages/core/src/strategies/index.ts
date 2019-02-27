@@ -5,35 +5,27 @@ import {
 } from './api'
 import {
   CreatePrimaryKeyStrategy,
-  CreatePrimaryKeyStrategyRegistry,
 } from './primary-key'
 import {
-  TaskCreationStrategy,
   TaskCreationStrategyRegistry,
 } from './task-creation'
 import {
-  DuplicateTaskStrategy,
   DuplicateTaskStrategyRegistry,
 } from './duplicate-task'
 import {
   CreateLeaseIdStrategy,
-  CreateLeaseIdStrategyRegistry,
 } from './lease-id'
 import {
   CreateLeaseTimeInSecondsStrategy,
-  CreateLeaseTimeInSecondsStrategyRegistry,
 } from './lease-time'
 import {
   GeneratePollWaitTimesStrategy,
-  GeneratePollWaitTimesStrategyRegistry,
 } from './poll'
 import {
-  RetryTaskStrategy,
   RetryTaskStrategyRegistry,
 } from './retry'
 import {
   CurrentTimeUTCStrategy,
-  CurrentTimeUTCStrategyRegistry,
 } from './time'
 
 

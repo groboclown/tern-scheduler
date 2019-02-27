@@ -6,7 +6,6 @@ import {
 } from './api'
 import {
   PrimaryKeyType,
-  LeaseIdType,
 } from '../../model'
 
 export const UUIDHostname = {
