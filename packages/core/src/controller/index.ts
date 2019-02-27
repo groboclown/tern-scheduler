@@ -2,10 +2,11 @@
 export {
   LeaseBehavior,
   runUpdateInLease,
+  NewScheduledJob,
 } from './schedule'
 
 export {
-  createScheduledJob as createSchedule,
+  createScheduledJob,
   startTask,
   taskFinished,
   disableSchedule,

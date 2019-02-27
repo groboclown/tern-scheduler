@@ -14,7 +14,7 @@ export interface JobExecutionManager {
    *
    * @param messaging
    */
-  withMessaging(messaging: JobExecutionEventEmitter): JobExecutionManager
+  withMessaging(messaging: JobExecutionEventEmitter): this
 
   /**
    * Tells the job execution framework to begin running a job.

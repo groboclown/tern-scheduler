@@ -40,6 +40,9 @@ export {
 export {
   TaskCreationStrategy,
   TaskCreationStrategyRegistry,
+  TaskCreationStrategyAfterCreation,
+  TaskCreationStrategyAfterFinish,
+  TaskCreationStrategyAfterStart,
 } from './task-creation'
 export {
   CreateLeaseIdStrategy,
@@ -103,6 +106,8 @@ class StrategyRegistryImpl<T> implements StrategyRegistry<T> {
     return ret
   }
 }
+
+
 
 export function createStrategyRegistry<T>(): StrategyRegistry<T> {
   return new StrategyRegistryImpl<T>()

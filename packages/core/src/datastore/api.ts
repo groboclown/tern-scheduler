@@ -213,7 +213,7 @@ export interface DataStore {
    * @param pageKey opaque indicator for the starting page to read.
    * @param limit suggested maximum records returned
    */
-  getExecutingTasks(pageKey: string, limit: number): Promise<Page<TaskModel>>
+  getExecutingTasks(pageKey: string | null, limit: number): Promise<Page<TaskModel>>
 
   /**
    * Get a page of all the tasks recorded as waiting to execute.  This is done while
@@ -222,12 +222,12 @@ export interface DataStore {
    * @param pageKey opaque indicator for the starting page to read.
    * @param limit suggested maximum records returned
    */
-  getPendingTasks(pageKey: string, limit: number): Promise<Page<TaskModel>>
+  getPendingTasks(pageKey: string | null, limit: number): Promise<Page<TaskModel>>
 
   /**
    * Get a page of tasks which are in any of the "failed" states.
    */
-  getFailedTasks(pageKey: string, limit: number, since?: Date): Promise<Page<TaskModel>>
+  getFailedTasks(pageKey: string | null, limit: number, since?: Date): Promise<Page<TaskModel>>
 
   /**
    * Get a page of tasks which the job execution framework has marked as completed without
@@ -237,7 +237,7 @@ export interface DataStore {
    * @param limit
    * @param since
    */
-  getCompletedTasks(pageKey: string, limit: number, since?: Date): Promise<Page<TaskModel>>
+  getCompletedTasks(pageKey: string | null, limit: number, since?: Date): Promise<Page<TaskModel>>
 
   /**
    * Get a page of tasks which have finished execution, regardless of fail state.
@@ -246,7 +246,7 @@ export interface DataStore {
    * @param limit
    * @param since
    */
-  getFinishedTasks(pageKey: string, limit: number, since?: Date): Promise<Page<TaskModel>>
+  getFinishedTasks(pageKey: string | null, limit: number, since?: Date): Promise<Page<TaskModel>>
 
   /**
    * Create the specific task in the data store.

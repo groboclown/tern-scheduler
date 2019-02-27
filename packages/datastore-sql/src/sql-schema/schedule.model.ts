@@ -9,10 +9,10 @@ import {
 
 import {
   ScheduleStateType
-} from '@tern-scheduler/core/src/model'
+} from '@tern-scheduler/core/model'
 import {
   ScheduledJobDataModel
-} from '@tern-scheduler/core/src/datastore/db-api';
+} from '@tern-scheduler/core/datastore/db-api';
 
 
 @Table({

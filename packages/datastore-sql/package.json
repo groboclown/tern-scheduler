@@ -18,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/groboclown/tern-scheduler.git",
-    "directory": "packages/datastore-sqlserver"
+    "directory": "packages/datastore-sql"
   },
   "license": "MIT",
   "publishConfig": {
@@ -31,14 +31,18 @@
     "@types/sinon": "^7.0.6",
     "chai": "^4.2.0",
     "mocha": "^6.0.1",
+    "mysql": "^2.16.0",
+    "pg": "^7.8.1",
     "sinon": "^7.2.4",
+    "sqlite": "^3.0.2",
+    "tedious": "^5.0.3",
     "ts-node": "^8.0.2",
     "typescript": "^3.3.3"
   },
   "dependencies": {
     "@tern-scheduler/core": "^0.0.1",
     "reflect-metadata": "^0.1.13",
-    "sequelize": "^4.42.0",
+    "sequelize": "^4.42.1",
     "sequelize-typescript": "^0.6.7"
   },
   "mocha": {}

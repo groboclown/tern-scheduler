@@ -10,6 +10,7 @@ It's built to be flexible to conform to your needs.  Any time the code encounter
 
 Tern is licensed under the [MIT License](LICENSE)
 
+
 ## Why Use Tern?
 
 Tern is still under development, but it is being developed with these goals:
@@ -33,39 +34,86 @@ The following are anti-goals for the project:
 
 Tern Scheduler is primarily a scheduling library ("tern-core") along with additional libraries to help you tie it together into a usable tool.  This means, as an end user, you'll need to make some decisions about how you want to connect it all up.
 
-The basic usage pattern flows like:
+All uses of the scheduling API start out the same. Create a data store implementation and setup the configuration.
+
+```(typescript)
+import { TernConfiguration, PollingCallback } from '@tern-scheduler/core';
+
+const datastore = ;
+const pollingCallback = new PollingCallback();
+const config = new TernConfiguration({
+  // Your data store, based on your specific environment.
+  store: myOwnDataStoreCreationMechanism(),
+
+  // Allows for different ways to poll for different actions.
+  generatePollWaitTimesStrategy: createMyGeneratePollWaitTimesStrategy(),
+
+  // Defines how long to wait to retry if a lease is owned by another
+  // process, and also how many times to retry.
+  retryLeaseTimeStrategy: createMyLeaseRetryTimeInSecondsStrategy(),
+
+  // You can provide the time to allow the combined effort for
+  // the datastore access + the job execution framework to fire a job.
+  // Default is 300 seconds (5 minutes).
+  leaseTimeSeconds: 10
+
+  // The background polling activity monitor and runner.
+  pollingCallback
+});
+
+// When you desire background polling tasks to stop, this call will cause all
+// the polling methods to drain out before quitting.
+pollingCallback.stopAndWait()
+  .then(() => {
+    console.log(`All background activities are complete.`);
+  }
+  .catch(() => {
+    console.log(`Timed out waiting for activities to complete.`);
+  });
+```
+
+`pollingCallback` can be used to monitor the polling and retry activities, and can be used to stop them safely.  The `config` object stores all the shared configuration information used by the clients and scheduler service.
+
+If you really need to, there are additional default strategies you can override.  Those are described below.
+
+### Client
+
+The API client is used to monitor schedule and task activity, and to manage scheduled jobs.  It returns results using the standard Promise class.
+
+```(typescript)
+import { TernClient } from '@tern-scheduler/core';
+
+const client = new TernClient(config);
+client.createScheduledJob(scheduledJobDefinition)
+  .then(schedule => {
+    console.log(`Created schedule ${schedule.displayName`);
+    return client.getActiveScheduledJobs()
+  })
+  .then(schedulePage => {
+    schedulePage.page.forEach(schedule => {
+      console.log(`${schedule.displayName} is running.`);
+    });
+  })
+  .catch(e => {
+    console.log(e);
+  });
+```
+
+### Scheduler Service
 
 ```(typescript)
 import { TernScheduler } from '@tern-scheduler/core'
 
-const scheduler = new TernScheduler({
-    // You will need to find a datastore implementation that
-    // matches your needs.  See below for more details.
-    store: creteMyDataStore(),
-
+const scheduler = new TernScheduler(config,
     // You will need to provide a way to connect your job
     // execution framework with Tern.  See below for more details.
-    jobExecution: createMyJobExecutionManager(),
+    createMyJobExecutionManager());
 
-    // Allows for different ways to poll for different actions.
-    generatePollWaitTimesStrategy: createMyGeneratePollWaitTimesStrategy(),
-
-    // Defines how long to wait to retry if a lease is owned by another
-    // process, and also how many times to retry.
-    retryLeaseTimeStrategy: createMyLeaseRetryTimeInSecondsStrategy(),
-
-    // You should provide the time to allow the datastore access +
-    // the job execution framework to fire a job.  Default is
-    // 300 seconds (5 minutes).
-    leaseTimeSeconds: 10
-});
-
-// When complete, this call will cause all the polling methods to
-// drain out before quitting.
-scheduler.stop()
+// Add more strategies to meet your schedule and task needs
+scheduler.strategies.taskCreationStrategyRegistry
+  .register('custom', myCustomStrategy);
 ```
 
-If you really need to, there are additional default strategies you can override.  Those are described, again, below.
 
 
 ### What Are We Talking About

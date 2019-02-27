@@ -10,9 +10,9 @@ import {
 
 import {
   DatabaseDataStore
-} from '@tern-scheduler/core/src/datastore/db-impl'
-import * as api from '@tern-scheduler/core/src/datastore/db-api'
-import { BaseModel, TASK_MODEL_NAME, SCHEDULE_MODEL_NAME } from '@tern-scheduler/core/src/model'
+} from '@tern-scheduler/core/datastore/db-impl'
+import * as api from '@tern-scheduler/core/datastore/db-api'
+import { BaseModel, TASK_MODEL_NAME, SCHEDULE_MODEL_NAME } from '@tern-scheduler/core/model'
 import { Op } from 'sequelize';
 
 

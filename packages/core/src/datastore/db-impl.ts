@@ -337,7 +337,7 @@ export class DatabaseDataStore implements DataStore {
       ]))
   }
 
-  getExecutingTasks(pageKey: string, limit: number): Promise<Page<TaskModel>> {
+  getExecutingTasks(pageKey: string | null, limit: number): Promise<Page<TaskModel>> {
     const startIndex = parsePageKey(pageKey)
     return this.db
       .find<TaskDataModel>(TASK_MODEL_NAME, startIndex, limit + 1,
@@ -345,7 +345,7 @@ export class DatabaseDataStore implements DataStore {
       .then(rows => pageResults(rows, startIndex, limit))
   }
 
-  getPendingTasks(pageKey: string, limit: number): Promise<Page<TaskModel>> {
+  getPendingTasks(pageKey: string | null, limit: number): Promise<Page<TaskModel>> {
     const startIndex = parsePageKey(pageKey)
     return this.db
       .find<TaskDataModel>(TASK_MODEL_NAME, startIndex, limit + 1,
@@ -353,7 +353,7 @@ export class DatabaseDataStore implements DataStore {
       .then(rows => pageResults(rows, startIndex, limit))
   }
 
-  getFailedTasks(pageKey: string, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
+  getFailedTasks(pageKey: string | null, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
     const startIndex = parsePageKey(pageKey)
     return this.db
       .find<TaskDataModel>(TASK_MODEL_NAME, startIndex, limit + 1,
@@ -366,7 +366,7 @@ export class DatabaseDataStore implements DataStore {
       .then(rows => pageResults(rows, startIndex, limit))
   }
 
-  getCompletedTasks(pageKey: string, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
+  getCompletedTasks(pageKey: string | null, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
     const startIndex = parsePageKey(pageKey)
     return this.db
       .find<TaskDataModel>(TASK_MODEL_NAME, startIndex, limit + 1,
@@ -374,7 +374,7 @@ export class DatabaseDataStore implements DataStore {
       .then(rows => pageResults(rows, startIndex, limit))
   }
 
-  getFinishedTasks(pageKey: string, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
+  getFinishedTasks(pageKey: string | null, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
     const startIndex = parsePageKey(pageKey)
     return this.db
       .find<TaskDataModel>(TASK_MODEL_NAME, startIndex, limit + 1,
