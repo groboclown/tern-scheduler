@@ -1,6 +1,5 @@
 
 import {
-  StrategyName,
   StrategyRegistry
 } from '../api'
 import {

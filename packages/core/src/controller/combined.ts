@@ -11,7 +11,6 @@ import {
   ScheduledJobModel,
   TaskModel,
   TASK_STATE_PENDING,
-  TaskStateType,
   TASK_STATE_STARTED,
   TASK_STATE_COMPLETE_ERROR,
 } from '../model'
@@ -26,8 +25,6 @@ import {
 
 import {
   CreatePrimaryKeyStrategy,
-  TaskCreationStrategy,
-  RetryTaskStrategy,
   DuplicateTaskStrategyRegistry,
   DUPLICATE_TASK_SKIP_NEW,
   CurrentTimeUTCStrategy,
@@ -40,13 +37,17 @@ import {
   JobExecutionState,
   isJobExecutionStateFailed,
   isJobExecutionStateRunning
-} from '../executor/types';
-import { ScheduledJobNotFoundError, LeaseNotObtainedError, TernError } from '../errors';
-import { logDebug, logInfo } from '../logging';
-import { TaskNotFoundError } from '../errors/controller-errors';
-import { RetryTaskStrategyRegistry } from '../strategies/retry';
-import { isTaskCreationStrategyAfterCreation, isTaskCreationStrategyAfterStart, isTaskCreationDisable, isTaskCreationQueue, isTaskCreationStrategyAfterFinish } from '../strategies/task-creation/api';
-import { SCHEDULE_STATE_DISABLED } from '../model/schedule';
+} from '../executor/types'
+import { TernError } from '../errors'
+import { logInfo } from '../logging'
+import { TaskNotFoundError } from '../errors/controller-errors'
+import { RetryTaskStrategyRegistry } from '../strategies/retry'
+import {
+  isTaskCreationStrategyAfterStart,
+  isTaskCreationDisable,
+  isTaskCreationStrategyAfterFinish
+} from '../strategies/task-creation/api'
+import { SCHEDULE_STATE_DISABLED } from '../model/schedule'
 
 
 /**
@@ -105,67 +106,6 @@ export function createScheduledJob(
           return { value: sched }
         })
     })
-}
-
-/**
- * Called when the schedule's execution time is reached.  This will handle
- * leasing the schedule, duplicate detection & handling,
- */
-export function createTaskForSchedule(
-  store: DataStore,
-  schedule: ScheduledJobModel,
-  now: Date,
-  lease: LeaseBehavior,
-  taskRunDate: Date,
-  createPrimaryKeyStrat: CreatePrimaryKeyStrategy,
-  retryIndex: number,
-  duplicateTaskReg: DuplicateTaskStrategyRegistry,
-  messaging: MessagingEventEmitter
-): Promise<void> {
-  // FIXME this method needs to be removed.  Instead, this checking must be done inside the other
-  // schedule lifecycle checks.  The task creation is done when a task finishes with no more
-  // retries, a task starts running, or a scheduled job is created.
-  const task: TaskModel = {
-    pk: createPrimaryKeyStrat(),
-    schedule: schedule.pk,
-    createdOn: now,
-    state: TASK_STATE_PENDING,
-    executeAt: taskRunDate,
-    executionJobId: null,
-    retryIndex: retryIndex,
-    completedInfo: null,
-    executionQueued: null,
-    executionStarted: null,
-    executionFinished: null,
-    nextTimeoutCheck: null,
-  }
-  return runUpdateInLease(store, schedule.pk, now, lease, messaging, (job, leaseId) => {
-    // Check if there's another task already in queued or running state
-    // for this schedule.  If so, run duplicate strategy logic.
-    return store
-      .getActiveTasksForScheduledJob(job, DUPLICATE_RUNNING_TASK_LIMIT)
-      .then(activeTasks => {
-        if (activeTasks.length > 0) {
-          const strat = duplicateTaskReg.get(job.duplicateStrategy)(job, activeTasks, task)
-          if (strat === DUPLICATE_TASK_SKIP_NEW) {
-            logInfo('createTaskForSchedule', `Skipping creating new task for schedule ${schedule.pk}`)
-            return Promise.resolve({
-              value: null
-            })
-          }
-        }
-        // Otherwise, create the task
-        return store.addTask(task)
-          .then(() => {
-            messaging.emit('taskCreated', task)
-            return {
-              value: null
-            }
-          })
-      })
-  })
-    // Ensure we return no value
-    .then(() => { })
 }
 
 /**
@@ -332,7 +272,7 @@ export function taskFinished(
                   if (activeTasks.length > 0) {
                     const strat = duplicateTaskReg.get(sched.duplicateStrategy)(sched, activeTasks, task)
                     if (strat === DUPLICATE_TASK_SKIP_NEW) {
-                      logInfo('createTaskForSchedule', `Skipping creating new task on retry for schedule ${sched.pk}`)
+                      logInfo('taskFinished', `Skipping creating new task on retry for schedule ${sched.pk}`)
                       // In this case, retry is not triggered.  So, we complete the task.
                       messaging.emit('taskFinished', task)
                       return Promise.resolve({ value: null })

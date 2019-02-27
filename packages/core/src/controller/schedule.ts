@@ -16,7 +16,7 @@ import {
   PollWaitTimes,
 } from '../strategies/poll'
 import {
-  ScheduledJobNotFoundError, TernError,
+  ScheduledJobNotFoundError,
 } from '../errors'
 import {
   logNotificationError,
@@ -86,9 +86,11 @@ export interface LeaseExitStateError {
 
 export type LeaseExitState<T> = LeaseExitStateValue<T> | LeaseExitStateError
 
+/*
 function isLeaseExitStateValue<T>(v: LeaseExitState<T>): v is LeaseExitStateValue<T> {
   return !!(<any>v).value
 }
+*/
 
 function isLeaseExitStateError<T>(v: LeaseExitState<T>): v is LeaseExitStateError {
   return !!(<any>v).error
@@ -128,9 +130,6 @@ export function createScheduledJobAlone<T>(
   return store
     .addScheduledJobModel(sched, leaseOwner, now, leaseBehavior.leaseTimeSeconds)
 
-    // FIXME DEBUG
-    .catch(e => { logDebug(`caught addSchJob error`, e); throw e })
-
     // With the lease, perform the update behavior.
     .then(() => {
       logDebug('createScheduledJob', `after addScheduledJobModel succeeded`)
@@ -159,6 +158,9 @@ export function createScheduledJobAlone<T>(
     .catch(e => {
       // Some problem was thrown while performing the other logic in the above
       // block.  This is a critical internal error.
+      // This could also be the addScheduledJobModel throwing an error.
+      // Note that if that failed, then the job wasn't added (probably), so the
+      // mark should fail too.
       return store
         .markLeasedScheduledJobNeedsRepair(sched.pk, now)
         .catch(e2 => {
