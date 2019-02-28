@@ -2,12 +2,12 @@
   "name": "@tern-scheduler/datastore-sql",
   "version": "0.0.1",
   "description": "Generic SQL datastore back end for the Tern Scheduler",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
     "build": "node_modules/.bin/tsc",
-    "test": "node_modules/.bin/mocha --require ts-node/register \"./src/**/__mocha__/*.tests.ts\"",
+    "test": "node_modules/.bin/mocha --require ts-node/register \"./lib/**/__mocha__/*.tests.ts\"",
     "#test:watch": "See https://github.com/mochajs/mocha/issues/3748 for bugs with the watch expression and ts-node",
-    "test:watch": "node_modules/.bin/mocha --require ts-node/register --reporter min --watch \"./src/**/__mocha__/*.tests.ts\""
+    "test:watch": "node_modules/.bin/mocha --require ts-node/register --reporter min --watch \"./lib/**/__mocha__/*.tests.ts\""
   },
   "keywords": [
     "scheduler",

@@ -250,3 +250,4 @@ This means that if you disable a scheduled job, the pending tasks will not fire,
 However, disabling scheduled jobs is a one-way path; it's done before a delete on the scheduled job can happen.  So there might be exceptional cases done for task completion when the scheduled job is disabled.  However, retrying a failed task for a scheduled job *should* be done, but may be tricky in terms of state management.  Because these updates would be done outside a lease, there's a very real opportunity for duplicate actions to happen.
 
 Additionally, deleting a scheduled job means the tasks should be deleted, too.  Currently, deleting a scheduled job only requires that the scheduled job has the "disabled" state.
+

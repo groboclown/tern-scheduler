@@ -2,24 +2,24 @@
 export {
   DataStore,
   Page,
-} from './datastore'
+} from './lib/datastore'
 
 export {
   MessagingEvents,
   MessagingEventEmitter,
   JobExecutionEventEmitter,
-} from './messaging'
+} from './lib/messaging'
 
 export {
   pollLongExecutingTasks,
   pollLongQueuedTasks,
   pollScheduledJobsForExpiredLeases,
   pollTaskReadyToExecute,
-} from './wire'
+} from './lib/wire'
 
 export {
   createMemoryDataStore
-} from './datastore/memory'
+} from './lib/datastore/memory'
 
 export {
   ExecutionJobId,
@@ -32,7 +32,7 @@ export {
   isJobExecutionStateCompleted,
   isJobExecutionStateFailed,
   isJobExecutionStateRunning,
-} from './executor'
+} from './lib/executor'
 
 export {
   AllStrategies,
@@ -57,27 +57,27 @@ export {
   TaskCreationStrategyAfterCreation,
   TaskCreationStrategyAfterFinish,
   TaskCreationStrategyAfterStart,
-} from './strategies'
+} from './lib/strategies'
 
 export {
   TaskModel,
   ScheduledJobModel,
-} from './model'
+} from './lib/model'
 
 
 import EventEmitter from 'events'
 import {
   DataStore, Page
-} from './datastore'
+} from './lib/datastore'
 import {
   ScheduledJobModel, TaskModel
-} from './model'
+} from './lib/model'
 import {
   MessagingEventEmitter,
-} from './messaging'
+} from './lib/messaging'
 import {
   JobExecutionManager
-} from './executor'
+} from './lib/executor'
 import {
   AllStrategies,
   CurrentTimeUTCStrategy,
@@ -88,33 +88,33 @@ import {
   RegisterPollCallback,
   CreateLeaseRetryTimeInSecondsStrategy,
   createStrategyRegistry,
-} from './strategies'
+} from './lib/strategies'
 import {
   StandardTime
-} from './strategies/time'
+} from './lib/strategies/time'
 import {
   UUIDCreatePrimaryKeyStrategy
-} from './strategies/primary-key/uuid'
+} from './lib/strategies/primary-key/uuid'
 import {
   UUIDCreateLeaseIdStrategy,
-} from './strategies/lease-id'
+} from './lib/strategies/lease-id'
 import {
   wireDataStore,
   pollLongExecutingTasks,
   pollLongQueuedTasks,
   pollScheduledJobsForExpiredLeases,
   pollTaskReadyToExecute,
-} from './wire'
+} from './lib/wire'
 import {
   registerAlwaysRunDuplicateTaskStrategy,
   registerAlwaysSkipDuplicateTaskStrategy
-} from './strategies/duplicate-task';
+} from './lib/strategies/duplicate-task';
 import {
   LeaseBehavior,
   NewScheduledJob,
   createScheduledJob as createScheduledJobCore,
   disableSchedule as disableScheduleCore,
-} from './controller'
+} from './lib/controller'
 
 const MILLISECONDS_PER_SECOND = 1000
 const DEFAULT_LEASE_TIME_SECONDS = 300

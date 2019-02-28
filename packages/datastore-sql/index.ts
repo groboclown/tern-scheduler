@@ -2,7 +2,7 @@ import { Sequelize, Model } from 'sequelize-typescript'
 
 import {
   getModels, ScheduledJob, Task
-} from './sql-schema'
+} from './lib/sql-schema'
 
 import {
   DataStore
@@ -10,9 +10,9 @@ import {
 
 import {
   DatabaseDataStore
-} from '@tern-scheduler/core/datastore/db-impl'
-import * as api from '@tern-scheduler/core/datastore/db-api'
-import { BaseModel, TASK_MODEL_NAME, SCHEDULE_MODEL_NAME } from '@tern-scheduler/core/model'
+} from '@tern-scheduler/core/lib/datastore/db-impl'
+import * as api from '@tern-scheduler/core/lib/datastore/db-api'
+import { BaseModel, TASK_MODEL_NAME, SCHEDULE_MODEL_NAME } from '@tern-scheduler/core/lib/model'
 import { Op } from 'sequelize';
 
 

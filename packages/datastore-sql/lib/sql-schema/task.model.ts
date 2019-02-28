@@ -8,10 +8,10 @@ import {
 
 import {
   TaskStateType
-} from '@tern-scheduler/core/model'
+} from '@tern-scheduler/core/lib/model'
 import {
   TaskDataModel
-} from '@tern-scheduler/core/datastore/db-api';
+} from '@tern-scheduler/core/lib/datastore/db-api';
 
 
 @Table({

@@ -11,7 +11,7 @@ import {
 } from '@tern-scheduler/core'
 import {
   createSqlDataStore
-} from '../'
+} from '../..'
 const expect = chai.expect
 
 export function standardDataStoreTests(sequelize: Sequelize) {
