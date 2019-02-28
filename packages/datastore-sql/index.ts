@@ -70,8 +70,8 @@ class SqlDatabase implements api.Database {
   }
 
   create<T extends BaseModel>(modelName: string, values: T): Promise<void> {
-    const m = this.models[modelName]
-    if (m) {
+    // Due to types, this needs to be working on the real model...  Sigh.
+    if (SCHEDULE_MODEL_NAME === modelName) {
       return new Promise((resolve, reject) =>
         ScheduledJob.create(values, {
           isNewRecord: true,
@@ -82,8 +82,20 @@ class SqlDatabase implements api.Database {
           .then(() => { resolve() })
           .catch(reject)
       )
+    } else if (TASK_MODEL_NAME === modelName) {
+      return new Promise((resolve, reject) =>
+        Task.create(values, {
+          isNewRecord: true,
+          returning: false,
+          logging: this.logger,
+          benchmark: !!this.logger,
+        })
+          .then(() => { resolve() })
+          .catch(reject)
+      )
+    } else {
+      throw new Error(`unknown model ${modelName}`)
     }
-    throw new Error(`unknown model ${modelName}`)
   }
 
   find<T extends BaseModel>(

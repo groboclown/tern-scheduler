@@ -132,7 +132,7 @@ export function createScheduledJobAlone<T>(
 
     // With the lease, perform the update behavior.
     .then(() => {
-      logDebug('createScheduledJob', `after addScheduledJobModel succeeded`)
+      logDebug('createScheduledJobAlone', `after addScheduledJobModel succeeded`)
       // If the with-lease execution fails, then mark the update lease failure.
       // That means we need special handling just in here...
       let t: Promise<LeaseExitState<T>> | LeaseExitState<T>
@@ -140,9 +140,10 @@ export function createScheduledJobAlone<T>(
         t = withLease(sched)
       } catch (e) {
         // The job must enter a needs-repair state.
+        logDebug('createScheduledJobAlone', `failed withLease call`, e)
         t = {
           error: e,
-          state: SCHEDULE_STATE_DISABLED
+          state: SCHEDULE_STATE_REPAIR
         }
       }
       if (t instanceof Promise) {
@@ -161,6 +162,7 @@ export function createScheduledJobAlone<T>(
       // This could also be the addScheduledJobModel throwing an error.
       // Note that if that failed, then the job wasn't added (probably), so the
       // mark should fail too.
+      logDebug('createScheduledJobAlone', 'Failed inside lease adding scheduled job and running withLease', e)
       return store
         .markLeasedScheduledJobNeedsRepair(sched.pk, now)
         .catch(e2 => {
