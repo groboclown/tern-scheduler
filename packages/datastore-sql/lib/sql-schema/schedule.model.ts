@@ -6,41 +6,50 @@ import {
   DataType
 } from 'sequelize-typescript'
 
-
-import {
-  ScheduleStateType
-} from '@tern-scheduler/core/lib/model'
-import {
-  ScheduledJobDataModel
-} from '@tern-scheduler/core/lib/datastore/db-api';
-
+import { datastore } from '@tern-scheduler/core'
 
 @Table({
   tableName: 'SCHEDULE'
 })
-export class ScheduledJob extends Model<ScheduledJob> implements ScheduledJobDataModel {
+export class ScheduledJob extends Model<ScheduledJob> implements datastore.db.ScheduledJobDataModel {
+  // ---------------------------------------
+  // BaseModel
   @PrimaryKey
   @Column({
     type: DataType.STRING(64),
     allowNull: false
   })
-  pk!: string
+  pk!: datastore.PrimaryKeyType
 
+  // ---------------------------------------
+  // ScheduledJobDataModel
   @Column({
     type: DataType.STRING(64)
   })
-  leaseOwner!: string | null
+  leaseOwner!: datastore.LeaseIdType | null
 
   @Column({
     type: DataType.DATE
   })
   leaseExpires!: Date | null
 
+  // ---------------------------------------
+  // ScheduledJobModel
   @Column({
-    type: DataType.STRING(64),
+    type: DataType.STRING(64)
+  })
+  updateState!: datastore.ScheduleUpdateStateType | null
+
+  @Column({
+    type: DataType.STRING(64)
+  })
+  updateTaskPk!: datastore.PrimaryKeyType | null
+
+  @Column({
+    type: DataType.BOOLEAN,
     allowNull: false
   })
-  state!: ScheduleStateType
+  pasture!: boolean
 
   @Column({
     type: DataType.STRING(256),
@@ -97,4 +106,14 @@ export class ScheduledJob extends Model<ScheduledJob> implements ScheduledJobDat
     allowNull: false
   })
   scheduleDefinition!: string
+
+  @Column({
+    type: DataType.STRING(64)
+  })
+  previousSchedule!: datastore.PrimaryKeyType | null
+
+  @Column({
+    type: DataType.STRING(256)
+  })
+  previousReason!: string | null
 }

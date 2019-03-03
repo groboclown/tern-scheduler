@@ -6,16 +6,18 @@ export {
 } from './base'
 
 export {
-  SCHEDULE_MODEL_NAME,
-
-  ScheduleStateType,
+  ScheduleUpdateStateType,
   LeaseIdType,
   ScheduledJobModel,
+
+  SCHEDULE_STATE_ADD_TASK,
+  SCHEDULE_STATE_START_TASK,
+  SCHEDULE_STATE_END_TASK,
+  SCHEDULE_STATE_PASTURE,
+  SCHEDULE_STATE_REPAIR,
 } from './schedule'
 
 export {
-  TASK_MODEL_NAME,
-
   TASK_STATE_PENDING,
   TASK_STATE_QUEUED,
   TASK_STATE_STARTED,

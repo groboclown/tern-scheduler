@@ -6,13 +6,10 @@ import {
   MemoryDatabase,
 } from '../../datastore/memory'
 import {
-  SCHEDULE_MODEL_NAME,
-  SCHEDULE_STATE_UPDATING,
-  SCHEDULE_STATE_ACTIVE,
+  SCHEDULE_STATE_ADD_TASK,
 } from '../../model/schedule'
 import {
   TaskModel,
-  TASK_MODEL_NAME,
   TASK_STATE_PENDING
 } from '../../model'
 import {
@@ -68,37 +65,18 @@ describe('combined', () => {
       const genTask: TaskModel[] = []
       const store = new ProxyDataStore(db)
         .forward('addScheduledJobModel')
-        .forward('releaseScheduledJobLease', (args) => {
-          const endState = args[2]
-          // The task is created only once, but it needs to be in active state,
-          // so that the task can be fired.  Disabled scheduled jobs means that
-          // the pending tasks can't run.
-          // Is this behavior we want?  Without it, it means leasing a disabled
-          // scheduled job, which has implications on other aspects of the code,
-          // such as removing a scheduled job.
-          expect(endState).to.equal(SCHEDULE_STATE_ACTIVE)
-        })
+        .forward('releaseScheduledJobLease')
         .forward('addTask', (args) => {
           const task: TaskModel = args[0]
-          const table = db.testAccess(SCHEDULE_MODEL_NAME)
-          expect(table).to.exist
-          if (!table) {
-            return
-          }
-          expect(table.rows).to.have.lengthOf(1)
-          const row = <ScheduledJobDataModel>(table.rows[0])
+          expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+          const row = <ScheduledJobDataModel>(db.scheduledJobTable.rows[0])
           expect(row.pk).to.equal(createdPk1)
           expect(row.leaseOwner).to.equal(createOwner)
-          expect(row.state).to.equal(SCHEDULE_STATE_UPDATING)
+          expect(row.updateState).to.equal(SCHEDULE_STATE_ADD_TASK)
           genTask.push(task)
         }, () => {
-          const table = db.testAccess(TASK_MODEL_NAME)
-          expect(table).to.exist
-          if (!table) {
-            return
-          }
-          expect(table.rows).to.have.lengthOf(1)
-          const row = <TaskModel>(table.rows[0])
+          expect(db.taskTable.rows).to.have.lengthOf(1)
+          const row = db.taskTable.rows[0]
           expect(row.pk).to.equal(createdPk2)
           expect(row.state).to.equal(TASK_STATE_PENDING)
         })
@@ -113,11 +91,15 @@ describe('combined', () => {
             }
           }
         }, mSpy.messaging)
-        .then(job => {
+        .then(jobPk => {
           // See the note above about active/disabled state  with a one-shot job.
-          expect(job.state).to.equal(SCHEDULE_STATE_ACTIVE)
+          expect(jobPk).to.equal(createdPk1)
+          expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+          const job = db.scheduledJobTable.rows[0]
+          expect(job.updateState).to.be.null
           expect(genTask).to.have.lengthOf(1)
           sinon.assert.calledWithExactly(mSpy.taskCreated, genTask[0])
+          expect(db.taskTable.rows).to.have.lengthOf(1)
         })
     })
   })

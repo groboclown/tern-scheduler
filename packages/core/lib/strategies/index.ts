@@ -36,6 +36,7 @@ export {
 } from './api'
 export {
   CreatePrimaryKeyStrategy,
+  addUUIDCreatePrimaryKeyStrategy,
 } from './primary-key'
 export {
   TaskCreationStrategy,
@@ -106,7 +107,6 @@ class StrategyRegistryImpl<T> implements StrategyRegistry<T> {
     return ret
   }
 }
-
 
 
 export function createStrategyRegistry<T>(): StrategyRegistry<T> {

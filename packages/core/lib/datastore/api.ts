@@ -11,10 +11,7 @@ import {
   TASK_STATE_FAILED,
   TASK_STATE_FAIL_RESTARTED,
 } from '../model'
-import {
-  SCHEDULE_STATE_DISABLED,
-  SCHEDULE_STATE_ACTIVE,
-} from '../model/schedule'
+import { ScheduleUpdateStateType } from '../model/schedule'
 import {
   ExecutionJobId
 } from '../executor/types'
@@ -34,6 +31,9 @@ export interface Page<T extends BaseModel> {
  * The write operations provided here are intended to be atomic.
  *
  * TODO allow for paging requests to include filters and sort.
+ *
+ * TODO most of these descriptions need to be rewritten because of the
+ * lease rewrite that happened.
  */
 export interface DataStore {
   /**
@@ -59,7 +59,7 @@ export interface DataStore {
    */
   addScheduledJobModel(model: ScheduledJobModel, leaseId: LeaseIdType, now: Date, leaseTimeSeconds: number): Promise<void>
 
-  getJob(pk: PrimaryKeyType): Promise<ScheduledJobModel | null>
+  getScheduledJob(pk: PrimaryKeyType): Promise<ScheduledJobModel | null>
 
   /**
    * Search for expired scheduled jobs.
@@ -93,7 +93,7 @@ export interface DataStore {
    * Attempts to disable the job.  If the job is already disabled, then this
    * returns a false value.  If the job could not be locked before disabling,
    * or if it is not in the data store, then an error is sent to the
-   * promise's reject.
+   * promise's reject.  This operation requires a lease.
    *
    * Scheduled jobs cannot be enabled.  If you want to enable a job, you must
    * create a new one.
@@ -106,13 +106,18 @@ export interface DataStore {
    * Attempts to delete the job only if it is disabled.  If the job is not in
    * the data store, or not disabled, then this returns a false value.
    *
+   * This is currently broken.  There are a bunch of conditions that must meet
+   * up before we can do this.  For example, should this cascade to the child
+   * tasks?
+   *
    * @param job
-   */
   deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean>
+   */
 
   /**
    * Create a lease on the scheduled job.  This must obtain the lease if and only if
-   * the job is in the ACTIVE state.  The lease is never stolen.
+   * the job not leased.  The lease is never stolen, and it doesn't matter if the
+   * job is pastured or not (trailing tasks can still need updates).
    * Do not take the lease if it is not expired, even if the lease ID matches up.
    *
    * Errors are raised in the promise for:
@@ -124,7 +129,14 @@ export interface DataStore {
    *  ignore this value.
    * @param leaseTimeSeconds: number of seconds to reserve the lease for.
    */
-  leaseScheduledJob(jobPk: PrimaryKeyType, leaseId: LeaseIdType, now: Date, leaseTimeSeconds: number): Promise<void>
+  leaseScheduledJob(
+    jobPk: PrimaryKeyType,
+    updateOperation: ScheduleUpdateStateType,
+    updateTaskPk: PrimaryKeyType | null,
+    leaseId: LeaseIdType,
+    now: Date,
+    leaseTimeSeconds: number
+  ): Promise<void>
 
   /**
    * Release the lease on the job and set its state to one of the given values.
@@ -141,9 +153,7 @@ export interface DataStore {
    *
    * @param leaseId
    */
-  releaseScheduledJobLease(leaseId: LeaseIdType, jobPk: PrimaryKeyType,
-    releaseState: SCHEDULE_STATE_DISABLED | SCHEDULE_STATE_ACTIVE
-  ): Promise<void>
+  releaseScheduledJobLease(leaseId: LeaseIdType, jobPk: PrimaryKeyType, pasture?: boolean): Promise<void>
 
   /**
    * Steal an expired lease.  Used by tasks that need to repair the lease state.
@@ -161,12 +171,13 @@ export interface DataStore {
   /**
    * Mark the currently leased scheduled job as needing repair.  It does this by
    * setting the lease expiration to `now`, so that the scheduled job repair
-   * polling mechanism can begin repairs to the scheduled job.
+   * polling mechanism can begin repairs to the scheduled job.  The scheduled
+   * job must be currently leased by the leaseID.
    *
    * @param jobPk
    * @param now
    */
-  markLeasedScheduledJobNeedsRepair(jobPk: PrimaryKeyType, now: Date): Promise<void>
+  markLeasedScheduledJobNeedsRepair(jobPk: PrimaryKeyType, leaseId: LeaseIdType, now: Date): Promise<void>
 
 
   // ------------------------------------------------------------------------

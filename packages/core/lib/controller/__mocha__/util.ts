@@ -7,11 +7,10 @@ import {
 import {
   PrimaryKeyType,
   LeaseIdType,
-  ScheduleStateType,
-  SCHEDULE_MODEL_NAME,
   ScheduledJobModel,
   TaskModel,
   TaskStateType,
+  ScheduleUpdateStateType,
 } from '../../model'
 import {
   CreatePrimaryKeyStrategy,
@@ -43,23 +42,25 @@ export function createStaticPKStrategy(id: PrimaryKeyType): CreatePrimaryKeyStra
   return () => id
 }
 
-export function getRow<T>(store: MemoryDatabase, modelName: string, pk: PrimaryKeyType): T {
-  const table = store.testAccess(modelName)
-  if (!table) {
-    throw new Error(`no table registered named ${modelName}`)
-  }
-  return <T>(table.rows.filter(r => r.pk === pk)[0])
+export function getTaskRow(store: MemoryDatabase, pk: PrimaryKeyType): TaskModel {
+  const table = store.taskTable
+  return table.rows.filter(r => r.pk === pk)[0]
+}
+
+export function getScheduleRow(store: MemoryDatabase, pk: PrimaryKeyType): ScheduledJobModel {
+  const table = store.scheduledJobTable
+  return table.rows.filter(r => r.pk === pk)[0]
 }
 
 export function setLockState(
   store: MemoryDatabase,
   pk: PrimaryKeyType,
   leaseOwner: LeaseIdType | null,
-  leaseState: ScheduleStateType,
+  leaseState: ScheduleUpdateStateType | null,
   leaseExpires: Date | null
 ): ScheduledJobModel {
   // Cast row to any to allow writes
-  const row: ScheduledJobModel = getRow(store, SCHEDULE_MODEL_NAME, pk)
+  const row = getScheduleRow(store, pk)
   const arow = <any>row
   arow.leaseOwner = leaseOwner
   arow.leaseState = leaseState
@@ -187,7 +188,7 @@ export class ProxyDataStore implements DataStore {
   addScheduledJobModel(model: ScheduledJobModel, leaseId: string, now: Date, leaseTimeSeconds: number): Promise<void> {
     throw new Error('unexpected call to datastore')
   }
-  getJob(pk: string): Promise<ScheduledJobModel | null> {
+  getScheduledJob(pk: string): Promise<ScheduledJobModel | null> {
     throw new Error('unexpected call to datastore')
   }
   pollLeaseExpiredScheduledJobs(now: Date, limit: number): Promise<ScheduledJobModel[]> {
@@ -205,16 +206,7 @@ export class ProxyDataStore implements DataStore {
   deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean> {
     throw new Error('unexpected call to datastore')
   }
-  leaseScheduledJob(jobPk: string, leaseId: string, now: Date, leaseTimeSeconds: number): Promise<void> {
-    throw new Error('unexpected call to datastore')
-  }
-  releaseScheduledJobLease(leaseId: string, jobPk: string, releaseState: "active" | "disabled"): Promise<void> {
-    throw new Error('unexpected call to datastore')
-  }
   repairExpiredLeaseForScheduledJob(jobPk: string, newLeaseId: string, now: Date, leaseTimeSeconds: number): Promise<void> {
-    throw new Error('unexpected call to datastore')
-  }
-  markLeasedScheduledJobNeedsRepair(jobPk: string, now: Date): Promise<void> {
     throw new Error('unexpected call to datastore')
   }
   pollExecutableTasks(now: Date, limit: number): Promise<TaskModel[]> {
@@ -270,6 +262,15 @@ export class ProxyDataStore implements DataStore {
   }
   deleteFinishedTask(task: TaskModel): Promise<boolean> {
     throw new Error('unexpected call to datastore')
+  }
+  leaseScheduledJob(jobPk: string, updateOperation: ScheduleUpdateStateType, updateTaskPk: string | null, leaseId: string, now: Date, leaseTimeSeconds: number): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  releaseScheduledJobLease(leaseId: string, jobPk: string, pasture?: boolean | undefined): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  markLeasedScheduledJobNeedsRepair(jobPk: string, leaseId: string, now: Date): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 }
 

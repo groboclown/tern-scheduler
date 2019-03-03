@@ -13,6 +13,7 @@ import {
   TASK_STATE_PENDING,
   TASK_STATE_STARTED,
   TASK_STATE_COMPLETE_ERROR,
+  PrimaryKeyType,
 } from '../model'
 
 import {
@@ -47,7 +48,7 @@ import {
   isTaskCreationDisable,
   isTaskCreationStrategyAfterFinish
 } from '../strategies/task-creation/api'
-import { SCHEDULE_STATE_DISABLED } from '../model/schedule'
+import { SCHEDULE_STATE_START_TASK, SCHEDULE_STATE_END_TASK, SCHEDULE_STATE_PASTURE } from '../model/schedule'
 
 
 /**
@@ -73,7 +74,7 @@ export function createScheduledJob(
   createPrimaryKeyStrat: CreatePrimaryKeyStrategy,
   taskCreationReg: TaskCreationStrategyRegistry,
   messaging: MessagingEventEmitter
-): Promise<ScheduledJobModel> {
+): Promise<PrimaryKeyType> {
   return createScheduledJobAlone(
     store,
     schedule,
@@ -81,13 +82,13 @@ export function createScheduledJob(
     leaseBehavior,
     createPrimaryKeyStrat,
     messaging,
-    (sched) => {
+    (sched, createdTaskPk) => {
       const strat = taskCreationReg.get(schedule.taskCreationStrategy)
       const taskRunDate = strat.createFromNewSchedule(now, sched)
       // A task item must always be created when a scheduled job is
       // created.
       const task: TaskModel = {
-        pk: createPrimaryKeyStrat(),
+        pk: createdTaskPk,
         schedule: sched.pk,
         createdOn: now,
         state: TASK_STATE_PENDING,
@@ -103,7 +104,7 @@ export function createScheduledJob(
       return store.addTask(task)
         .then(() => {
           messaging.emit('taskCreated', task)
-          return { value: sched }
+          return { value: sched.pk }
         })
     })
 }
@@ -125,62 +126,64 @@ export function startTask(
   // TODO include timeouts for queue and run times?  Should those be part of the job framework (thus the messaging)?
   messaging: MessagingEventEmitter
 ): Promise<void> {
-  return runUpdateInLease(store, task.schedule, now, leaseBehavior, messaging, (sched): Promise<LeaseExitStateValue<null>> =>
-    store
-      // FIXME should the queue call include the set long time check date?
-      .markTaskQueued(task, now)
-      .then(() =>
-        // THe only external system we're allowed to call while we have a
-        // scheduled job lease.
-        startJob(task.pk, sched.jobName, sched.jobContext)
-          .catch(e =>
-            // request to start the job failed.  This is different than the
-            // job just failing; this means the job framework just couldn't
-            // perform its actions.
-            store
-              .markTaskStartFailed(task, currentTimeUTC(), String(e))
-              .then(() => Promise.reject(e))
-          )
-      )
-      .then((execId) =>
-        store
-          .markTaskStarted(task, currentTimeUTC(), execId)
-          .then(() => execId)
-      )
-      .then(execId => {
-        messaging.emit('taskRunning', task, execId)
-      })
-      .then(() => {
-        // Check the job if a new task should be created.
-        const taskCreationStrategy = taskCreationReg.get(sched.taskCreationStrategy)
-        if (isTaskCreationStrategyAfterStart(taskCreationStrategy)) {
-          const taskRunDate = taskCreationStrategy.createAfterTaskStarts(now, sched)
-          if (isTaskCreationDisable(taskRunDate)) {
-            return Promise.resolve({ value: null, state: SCHEDULE_STATE_DISABLED })
+  return runUpdateInLease(store,
+    SCHEDULE_STATE_START_TASK, task.schedule, task.pk,
+    now, leaseBehavior, messaging, (sched): Promise<LeaseExitStateValue<null>> =>
+      store
+        // FIXME should the queue call include the set long time check date?
+        .markTaskQueued(task, now)
+        .then(() =>
+          // THe only external system we're allowed to call while we have a
+          // scheduled job lease.
+          startJob(task.pk, sched.jobName, sched.jobContext)
+            .catch(e =>
+              // request to start the job failed.  This is different than the
+              // job just failing; this means the job framework just couldn't
+              // perform its actions.
+              store
+                .markTaskStartFailed(task, currentTimeUTC(), String(e))
+                .then(() => Promise.reject(e))
+            )
+        )
+        .then((execId) =>
+          store
+            .markTaskStarted(task, currentTimeUTC(), execId)
+            .then(() => execId)
+        )
+        .then(execId => {
+          messaging.emit('taskRunning', task, execId)
+        })
+        .then(() => {
+          // Check the job if a new task should be created.
+          const taskCreationStrategy = taskCreationReg.get(sched.taskCreationStrategy)
+          if (isTaskCreationStrategyAfterStart(taskCreationStrategy)) {
+            const taskRunDate = taskCreationStrategy.createAfterTaskStarts(now, sched)
+            if (isTaskCreationDisable(taskRunDate)) {
+              return Promise.resolve({ value: null, pasture: true })
+            }
+            const task: TaskModel = {
+              pk: createPrimaryKeyStrat(),
+              schedule: sched.pk,
+              createdOn: now,
+              state: TASK_STATE_PENDING,
+              executeAt: taskRunDate.runAt,
+              executionJobId: null,
+              retryIndex: 0,
+              completedInfo: null,
+              executionQueued: null,
+              executionStarted: null,
+              executionFinished: null,
+              nextTimeoutCheck: null,
+            }
+            return store.addTask(task)
+              .then(() => {
+                messaging.emit('taskCreated', task)
+                return { value: null }
+              })
           }
-          const task: TaskModel = {
-            pk: createPrimaryKeyStrat(),
-            schedule: sched.pk,
-            createdOn: now,
-            state: TASK_STATE_PENDING,
-            executeAt: taskRunDate.runAt,
-            executionJobId: null,
-            retryIndex: 0,
-            completedInfo: null,
-            executionQueued: null,
-            executionStarted: null,
-            executionFinished: null,
-            nextTimeoutCheck: null,
-          }
-          return store.addTask(task)
-            .then(() => {
-              messaging.emit('taskCreated', task)
-              return { value: null }
-            })
-        }
-        // Nothing to run
-        return { value: null }
-      })
+          // Nothing to run
+          return { value: null }
+        })
   )
     // Make sure we return void
     .then(() => { })
@@ -218,7 +221,7 @@ export function taskFinished(
       if (!task) {
         throw new TaskNotFoundError(execJobId)
       }
-      return runUpdateInLease(store, task.schedule, now, lease, messaging, (sched, leaseId): Promise<LeaseExitStateValue<null>> => {
+      return runUpdateInLease(store, SCHEDULE_STATE_END_TASK, task.schedule, task.pk, now, lease, messaging, (sched): Promise<LeaseExitStateValue<null>> => {
         if (isJobExecutionStateFailed(result)) {
           return store
             .markTaskFailed(task, now, TASK_STATE_STARTED, TASK_STATE_COMPLETE_ERROR, result.result)
@@ -231,7 +234,7 @@ export function taskFinished(
                 if (isTaskCreationStrategyAfterFinish(taskCreationStrategy)) {
                   const taskRunDate = taskCreationStrategy.createAfterTaskFinishes(now, sched)
                   if (isTaskCreationDisable(taskRunDate)) {
-                    return Promise.resolve(<LeaseExitStateValue<null>>{ value: null, state: SCHEDULE_STATE_DISABLED })
+                    return Promise.resolve(<LeaseExitStateValue<null>>{ value: null, pasture: true })
                   }
                   const newTask: TaskModel = {
                     pk: createPrimaryKeyStrat(),
@@ -336,8 +339,8 @@ export function disableSchedule(
   leaseBehavior: LeaseBehavior,
   messaging: MessagingEventEmitter
 ): Promise<void> {
-  return runUpdateInLease(store, schedule.pk, now, leaseBehavior, messaging, (sched, leaseId) => {
-    return { value: null, state: SCHEDULE_STATE_DISABLED }
+  return runUpdateInLease(store, SCHEDULE_STATE_PASTURE, schedule.pk, null, now, leaseBehavior, messaging, () => {
+    return { value: null, pasture: true }
   })
     // Ensure we return void
     .then(() => { })

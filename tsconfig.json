@@ -10,6 +10,7 @@
         "strictNullChecks": true,
         "strict": true,
         "esModuleInterop": true,
-        "noUnusedLocals": true
+        "noUnusedLocals": true,
+        "declaration": true
     }
 }

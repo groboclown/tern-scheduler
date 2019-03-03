@@ -10,9 +10,9 @@ import {
 } from '../../datastore/db-impl'
 import {
   ScheduledJobModel,
-  SCHEDULE_MODEL_NAME,
-  SCHEDULE_STATE_ACTIVE,
-  SCHEDULE_STATE_UPDATING,
+  ScheduleUpdateStateType,
+  SCHEDULE_STATE_START_TASK,
+  SCHEDULE_STATE_PASTURE,
 } from '../../model/schedule'
 import {
   NewScheduledJob,
@@ -29,6 +29,7 @@ import {
   LeaseNotOwnedError,
 } from '../../errors'
 import { ScheduledJobDataModel } from '../../datastore/db-api'
+import { PrimaryKeyType } from '../../model';
 const expect = chai.expect
 const fail = chai.assert.fail
 
@@ -53,13 +54,23 @@ describe('schedule controller', () => {
     taskCreationStrategy: 'abc',
     retryStrategy: 'x'
   }
-  const expectedCreatedJob: ScheduledJobDataModel = {
-    ...requestedJob,
-    leaseExpires: null,
-    leaseOwner: null,
-    state: SCHEDULE_STATE_ACTIVE,
-    createdOn: now,
-    pk: createdPk
+  function mkExpectedCreatedJob(args: {
+    updateState: ScheduleUpdateStateType | null,
+    updateTaskPk?: PrimaryKeyType,
+    pasture?: boolean
+  }): ScheduledJobDataModel {
+    return {
+      ...requestedJob,
+      leaseExpires: null,
+      leaseOwner: null,
+      updateState: args.updateState,
+      createdOn: now,
+      pk: createdPk,
+      updateTaskPk: args.updateTaskPk || null,
+      pasture: args.pasture === true,
+      previousSchedule: null,
+      previousReason: null,
+    }
   }
   describe('#createScheduledJob', () => {
     describe('When the db is connected', () => {
@@ -72,13 +83,8 @@ describe('schedule controller', () => {
         return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
           .then(pk => {
             sinon.assert.notCalled(mSpy.generalError)
-            const schedTable = db.testAccess(SCHEDULE_MODEL_NAME)
-            expect(schedTable).to.exist
-            if (!schedTable) {
-              return
-            }
-            expect(schedTable.rows).to.have.lengthOf(1)
-            expect(schedTable.rows[0]).to.deep.equal(expectedCreatedJob)
+            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+            expect(db.scheduledJobTable.rows[0]).to.deep.equal(mkExpectedCreatedJob({ updateState: null }))
           })
       })
     })
@@ -109,46 +115,37 @@ describe('schedule controller', () => {
         const db = new MemoryDatabase()
         const store = new DatabaseDataStore(db)
         const mSpy = new MessagingSpy()
+        const createTaskPk = 'taskPk1'
         store.updateSchema()
         return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
           .then(pk => {
             sinon.assert.notCalled(mSpy.generalError)
             expect(pk).to.equal(createdPk)
             // Force an unlock of the job
-            setLockState(db, pk, null, SCHEDULE_STATE_ACTIVE, null)
+            setLockState(db, pk, null, null, null)
             return pk
           })
-          .then(pk => runUpdateInLease(store, pk, now, leaseBehavior, mSpy.messaging, (jobB) => {
+          .then(pk => runUpdateInLease(store, SCHEDULE_STATE_START_TASK, pk, createTaskPk, now, leaseBehavior, mSpy.messaging, (jobB) => {
             sinon.assert.notCalled(mSpy.generalError)
             const job = <ScheduledJobDataModel>jobB
             // Expect the record to be leased.
             expect(job.pk).to.equal(pk)
             expect(job.leaseOwner).to.equal(createOwner)
-            expect(job.state).to.equal(SCHEDULE_STATE_UPDATING)
-            const table = db.testAccess(SCHEDULE_MODEL_NAME)
-            expect(table).to.exist
-            if (!table) {
-              return Promise.reject()
-            }
-            expect(table.rows).to.have.lengthOf(1)
-            const row = <ScheduledJobDataModel>(table.rows[0])
+            expect(job.updateState).to.equal(SCHEDULE_STATE_START_TASK)
+            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+            const row = db.scheduledJobTable.rows[0]
             expect(row.pk).to.equal(pk)
             expect(row.leaseOwner).to.equal(createOwner)
-            expect(row.state).to.equal(SCHEDULE_STATE_UPDATING)
+            expect(row.updateState).to.equal(SCHEDULE_STATE_START_TASK)
             return Promise.resolve({ value: 'xyz' })
           }))
           .then(res => {
             expect(res).to.equal('xyz')
             // Expect the record to not be leased
-            const table = db.testAccess(SCHEDULE_MODEL_NAME)
-            expect(table).to.exist
-            if (!table) {
-              return
-            }
-            expect(table.rows).to.have.lengthOf(1)
-            const row = <ScheduledJobDataModel>(table.rows[0])
+            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+            const row = <ScheduledJobDataModel>(db.scheduledJobTable.rows[0])
             expect(row.leaseOwner).to.be.null
-            expect(row.state).to.equal(SCHEDULE_STATE_ACTIVE)
+            expect(row.updateState).to.be.null
           })
       })
     })
@@ -166,19 +163,14 @@ describe('schedule controller', () => {
             sinon.assert.notCalled(mSpy.generalError)
             expect(pk).to.equal(createdPk)
             // Force an unlock of the job
-            setLockState(db, pk, null, SCHEDULE_STATE_ACTIVE, null)
+            setLockState(db, pk, null, null, null)
             return pk
           })
-          .then(pk => runUpdateInLease(store, pk, now, leaseBehavior, mSpy.messaging, (job) => {
+          .then(pk => runUpdateInLease(store, SCHEDULE_STATE_PASTURE, pk, null, now, leaseBehavior, mSpy.messaging, (job) => {
             sinon.assert.notCalled(mSpy.generalError)
-            const table = db.testAccess(SCHEDULE_MODEL_NAME)
-            expect(table).to.exist
-            if (!table) {
-              return Promise.reject()
-            }
-            expect(table.rows).to.have.lengthOf(1)
+            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
             // Set the real object's owner to a different one.
-            const row = <any>(<ScheduledJobModel>(table.rows[0]))
+            const row = <any>(<ScheduledJobModel>(db.scheduledJobTable.rows[0]))
             row.leaseOwner = owner2
             return Promise.resolve({ value: 1 })
           }))

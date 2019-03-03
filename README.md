@@ -199,6 +199,10 @@ Yes, you can change how the library discovers the current time.  By default, thi
 
 All errors encountered in the schedule are passed to the [event message emitter](core/src/messaging/README.md).  By default, errors are reported to standard error.  You can add a new handler by listening to the `generalError` event on the message emitter.
 
+### Suspend State
+
+The scheduler does not support a proper "suspend" state, where tasks are put on pause indefinitely.  Instead, this can be simulated by putting a schedule out to pasture, then creating a new one when the schedule should be resumed.  This will remove historical connections
+
 ## Under the Covers
 
 Tern breaks up the problem of scheduling job executions into these more basic problems:
@@ -233,21 +237,22 @@ The implementation uses a variation on the [two-phase commit protocol](https://e
 
 ## Implementation TO-DOs
 
-### Delete and Disable Scheduled Job
+### Repairing and Disabled and Delete Scheduled Jobs
 
-Right now, the scheduled job lifecycle goes:
-1. Create scheduled job, which implicitly creates a task.
-1. Tasks have their lifecycle.
-1. The scheduled job is disabled.
-1. The scheduled job is deleted.
+There are a lot of problems with disabled jobs as they stand now.
 
-This, however, puts the tasks in a weird position.
+* Lease state is separate from other state.  Lease state is either "null" (not leased) or one of:
+  * Add Task + added task PK
+  * Update Task + task PK
+  * Repair Task + task PK
+  * Pasture schedule
+  This is primarily possible because PK creation is done outside the data store.
+* Pasture flag.  It's put out to pasture and ready for the grave.  Pastured schedules allow tasks to run as normal, but new tasks are created only on retry.
 
-Right now, tasks will only perform state change when the owning scheduled job is active, because leases can only be made on active scheduled jobs, and state change on a task can only happen with a leased parent scheduled job.
+All these states allow for easier inspection of state when the task goes into repair mode.
 
-This means that if you disable a scheduled job, the pending tasks will not fire, and the actively running tasks will not be able to set their completion state.
+Deleting scheduled jobs is broken right now - it will leave tasks without parents.
 
-However, disabling scheduled jobs is a one-way path; it's done before a delete on the scheduled job can happen.  So there might be exceptional cases done for task completion when the scheduled job is disabled.  However, retrying a failed task for a scheduled job *should* be done, but may be tricky in terms of state management.  Because these updates would be done outside a lease, there's a very real opportunity for duplicate actions to happen.
+### One Time Task Removal
 
-Additionally, deleting a scheduled job means the tasks should be deleted, too.  Currently, deleting a scheduled job only requires that the scheduled job has the "disabled" state.
-
+If we want to cancel one future task, then doing so should set the task to a new "never run" state, and peel a new subsequent task as though the just-canceled task started then completed.  It's a new "finished" state.  This is an easy win for functionality.

@@ -1,4 +1,7 @@
-import { Sequelize, Model } from 'sequelize-typescript'
+import { Sequelize, ICreateOptions, IFindOptions } from 'sequelize-typescript'
+import { UpdateOptions, DestroyOptions } from 'sequelize'
+// Sequelize compatiblity
+import * as BluebirdPromise from 'bluebird'
 
 import {
   getModels, ScheduledJob, Task
@@ -8,12 +11,10 @@ import {
   DataStore
 } from '@tern-scheduler/core'
 
-import {
-  DatabaseDataStore
-} from '@tern-scheduler/core/lib/datastore/db-impl'
-import * as api from '@tern-scheduler/core/lib/datastore/db-api'
-import { BaseModel, TASK_MODEL_NAME, SCHEDULE_MODEL_NAME } from '@tern-scheduler/core/lib/model'
+import { datastore } from '@tern-scheduler/core'
 import { Op } from 'sequelize';
+
+const DatabaseDataStore = datastore.DatabaseDataStore
 
 
 export function createSqlDataStore(sequelize: Sequelize,
@@ -21,18 +22,163 @@ export function createSqlDataStore(sequelize: Sequelize,
   return new DatabaseDataStore(new SqlDatabase(sequelize, logger))
 }
 
-class SqlDatabase implements api.Database {
-  private readonly models: { [name: string]: typeof Model }
+
+class SequelizeTable<T extends ScheduledJob | Task> implements datastore.db.DbTableController<T> {
+  constructor(
+    private readonly logger?: (sql: string, timeMillis?: number) => void
+  ) { }
+  conditionalUpdate(
+    primaryKey: datastore.PrimaryKeyType,
+    newValues: Partial<T>,
+    conditional?: datastore.db.Conditional<T>
+  ): Promise<number> {
+    return new Promise((resolve, reject) =>
+      this._update(newValues, {
+        where: toWhereClause(primaryKey, conditional),
+        returning: false,
+        logging: this.logger,
+        benchmark: !!this.logger,
+      })
+        .then((args) => {
+          resolve(args[0])
+        })
+        .catch(reject)
+    )
+  }
+
+  _update(newValues: Partial<T>, options: UpdateOptions): BluebirdPromise<[number, T[]]> {
+    throw new Error(`not implemented`)
+  }
+
+  /**
+   * Returned promise should have a `DuplicatePrimaryKeyError` problem if the
+   * primary key for the value is already in the data store.  However, the
+   * primary key provider that creates it should be robust enough to prevent
+   * these issues.
+   *
+   * @param values
+   */
+  create(
+    values: T
+  ): Promise<void> {
+    return new Promise((resolve, reject) =>
+      this._create(values, {
+        isNewRecord: true,
+        returning: false,
+        logging: this.logger,
+        benchmark: !!this.logger,
+      })
+        .then(() => { resolve() })
+        .catch(reject)
+    )
+  }
+
+  _create(values: T, options: ICreateOptions): BluebirdPromise<T> {
+    throw new Error(`not implemented`)
+  }
+
+  find(
+    startIndex: number,
+    maximumRecordCount: number,
+    conditional?: datastore.db.Conditional<T>
+  ): Promise<T[]> {
+    return new Promise((resolve, reject) =>
+      this._find({
+        where: conditional ? conditionalLink(conditional) : undefined,
+        offset: startIndex,
+        limit: maximumRecordCount,
+        logging: this.logger,
+        benchmark: !!this.logger,
+      })
+        // Returns ScheduledJob type, but we expect to return ScheduledJobDataModel.
+        // But we created ScheduledJob so that it implements ScheduledJobDataModel,
+        // so we're fine.
+        .then(values => { resolve(<T[]>(<any[]>values)) })
+        .catch(reject)
+    )
+  }
+
+  _find(options: IFindOptions<T>): BluebirdPromise<T[]> {
+    throw new Error(`not implemented`)
+  }
+
+  remove(primaryKey: datastore.PrimaryKeyType, conditional?: datastore.db.Conditional<T>): Promise<number> {
+    return new Promise((resolve, reject) =>
+      this._destroy({
+        where: toWhereClause(primaryKey, conditional),
+        limit: 1, // primary key provided, so only delete at most 1
+        logging: this.logger,
+        benchmark: !!this.logger,
+      })
+        .then(value => { resolve(value) })
+        .catch(reject)
+    )
+  }
+
+  _destroy(options: DestroyOptions): BluebirdPromise<number> {
+    throw new Error(`not implemented`)
+  }
+}
+
+
+class ScheduledJobTable extends SequelizeTable<ScheduledJob> {
+  constructor(logger?: (sql: string, timeMillis?: number) => void) {
+    super(logger)
+  }
+
+  _update(newValues: Partial<ScheduledJob>, options: UpdateOptions): BluebirdPromise<[number, ScheduledJob[]]> {
+    return ScheduledJob.update(newValues, options)
+  }
+
+  _create(values: ScheduledJob, options: ICreateOptions): BluebirdPromise<ScheduledJob> {
+    return ScheduledJob.create(values, options)
+  }
+
+  _find(options: IFindOptions<ScheduledJob>): BluebirdPromise<ScheduledJob[]> {
+    return ScheduledJob.findAll(options)
+  }
+
+  _destroy(options: DestroyOptions): BluebirdPromise<number> {
+    return ScheduledJob.destroy(options)
+  }
+}
+
+
+class TaskTable extends SequelizeTable<Task> {
+  constructor(logger?: (sql: string, timeMillis?: number) => void) {
+    super(logger)
+  }
+
+  _update(newValues: Partial<Task>, options: UpdateOptions): BluebirdPromise<[number, Task[]]> {
+    return Task.update(newValues, options)
+  }
+
+  _create(values: Task, options: ICreateOptions): BluebirdPromise<Task> {
+    return Task.create(values, options)
+  }
+
+  _find(options: IFindOptions<Task>): BluebirdPromise<Task[]> {
+    return Task.findAll(options)
+  }
+
+  _destroy(options: DestroyOptions): BluebirdPromise<number> {
+    return Task.destroy(options)
+  }
+}
+
+
+
+class SqlDatabase implements datastore.db.Database {
+  readonly scheduledJobTable: datastore.db.DbTableController<datastore.db.ScheduledJobDataModel>
+  readonly taskTable: datastore.db.DbTableController<datastore.db.TaskDataModel>
 
   constructor(
     private readonly sequelize: Sequelize,
     private readonly logger?: (sql: string, timeMillis?: number) => void
   ) {
     sequelize.addModels(getModels())
-    this.models = {
-      [SCHEDULE_MODEL_NAME]: ScheduledJob,
-      [TASK_MODEL_NAME]: Task,
-    }
+    this.scheduledJobTable = new ScheduledJobTable(logger)
+    this.taskTable = new TaskTable(logger)
   }
 
   updateSchema(): Promise<void> {
@@ -44,119 +190,10 @@ class SqlDatabase implements api.Database {
         .catch(reject)
     })
   }
-
-  conditionalUpdate<T extends BaseModel>(
-    modelName: string,
-    primaryKey: string,
-    newValues: Partial<T>,
-    conditional?: api.Conditional | undefined
-  ): Promise<number> {
-    const m = this.models[modelName]
-    if (m) {
-      return new Promise((resolve, reject) =>
-        ScheduledJob.update(newValues, {
-          where: toWhereClause(primaryKey, conditional),
-          returning: false,
-          logging: this.logger,
-          benchmark: !!this.logger,
-        })
-          .then((args) => {
-            resolve(args[0])
-          })
-          .catch(reject)
-      )
-    }
-    throw new Error(`unknown model ${modelName}`)
-  }
-
-  create<T extends BaseModel>(modelName: string, values: T): Promise<void> {
-    // Due to types, this needs to be working on the real model...  Sigh.
-    if (SCHEDULE_MODEL_NAME === modelName) {
-      return new Promise((resolve, reject) =>
-        ScheduledJob.create(values, {
-          isNewRecord: true,
-          returning: false,
-          logging: this.logger,
-          benchmark: !!this.logger,
-        })
-          .then(() => { resolve() })
-          .catch(reject)
-      )
-    } else if (TASK_MODEL_NAME === modelName) {
-      return new Promise((resolve, reject) =>
-        Task.create(values, {
-          isNewRecord: true,
-          returning: false,
-          logging: this.logger,
-          benchmark: !!this.logger,
-        })
-          .then(() => { resolve() })
-          .catch(reject)
-      )
-    } else {
-      throw new Error(`unknown model ${modelName}`)
-    }
-  }
-
-  find<T extends BaseModel>(
-    modelName: string,
-    startIndex: number,
-    maximumRecordCount: number,
-    conditional?: api.Conditional | undefined
-  ): Promise<T[]> {
-    // Due to types, this needs to be working on the real model...  Sigh.
-    if (SCHEDULE_MODEL_NAME === modelName) {
-      return new Promise((resolve, reject) =>
-        ScheduledJob.findAll<ScheduledJob>({
-          where: conditional ? conditionalLink(conditional) : undefined,
-          offset: startIndex,
-          limit: maximumRecordCount,
-          logging: this.logger,
-          benchmark: !!this.logger,
-        })
-          // Returns ScheduledJob type, but we expect to return ScheduledJobDataModel.
-          // But we created ScheduledJob so that it implements ScheduledJobDataModel,
-          // so we're fine.
-          .then(values => { resolve(<T[]>(<any[]>values)) })
-          .catch(reject)
-      )
-    }
-    if (TASK_MODEL_NAME === modelName) {
-      return new Promise((resolve, reject) =>
-        Task.findAll<Task>({
-          where: conditional ? conditionalLink(conditional) : undefined,
-          offset: startIndex,
-          limit: maximumRecordCount,
-          logging: this.logger,
-          benchmark: !!this.logger,
-        })
-          .then(values => { resolve(<T[]>(<any[]>values)) })
-          .catch(reject)
-      )
-    }
-    throw new Error(`unknown model ${modelName}`)
-  }
-
-  remove(
-    modelName: string,
-    primaryKey: string,
-    conditional?: api.Conditional | undefined
-  ): Promise<number> {
-    const m = this.models[modelName]
-    if (m) {
-      m.destroy({
-        where: toWhereClause(primaryKey, conditional),
-        limit: 1, // primary key provided, so only delete at most 1
-        logging: this.logger,
-        benchmark: !!this.logger,
-      })
-    }
-    throw new Error(`unknown model ${modelName}`)
-  }
 }
 
 
-function toWhereClause(primaryKey: string, conditional: api.Conditional | undefined): any {
+function toWhereClause<T extends datastore.BaseModel>(primaryKey: string, conditional: datastore.db.Conditional<T> | undefined): any {
   if (conditional) {
     return { [Op.and]: [{ pk: primaryKey }, conditionalLink(conditional)] }
   } else {
@@ -164,28 +201,34 @@ function toWhereClause(primaryKey: string, conditional: api.Conditional | undefi
   }
 }
 
-function conditionalLink(cnd: api.Conditional): any {
-  if (api.isAndConditional(cnd)) {
+function conditionalLink<T extends datastore.BaseModel>(cnd: datastore.db.Conditional<T>): any {
+  if (datastore.db.isAndConditional(cnd)) {
     const ret: any[] = []
     cnd.conditionals.forEach(c => { ret.push(conditionalLink(c)) })
     return { [Op.and]: ret }
   }
-  if (api.isOrConditional(cnd)) {
+  if (datastore.db.isOrConditional(cnd)) {
     const ret: any[] = []
     cnd.conditionals.forEach(c => { ret.push(conditionalLink(c)) })
     return { [Op.or]: ret }
   }
-  if (api.isEqualsConditional(cnd)) {
-    return { [cnd.key]: cnd.value }
+  if (datastore.db.isEqualsConditional(cnd)) {
+    return { [cnd.key]: { [Op.eq]: cnd.value } }
   }
-  if (api.isAfterDateConditional(cnd)) {
-    return { [cnd.key]: { [Op.ne]: null, [Op.gt]: cnd.after } }
-  }
-  if (api.isBeforeDateConditional(cnd)) {
+  //if (datastore.db.isAfterDateConditional(cnd)) {
+  //  return { [cnd.key]: { [Op.ne]: null, [Op.gt]: cnd.after } }
+  //}
+  if (datastore.db.isBeforeDateConditional(cnd)) {
     return { [cnd.key]: { [Op.ne]: null, [Op.lt]: cnd.before } }
   }
-  if (api.isOneOfConditional(cnd)) {
+  if (datastore.db.isOneOfConditional(cnd)) {
     return { [cnd.key]: { [Op.in]: cnd.values } }
+  }
+  if (datastore.db.isNotNullConditional(cnd)) {
+    return { [cnd.key]: { [Op.ne]: null } }
+  }
+  if (datastore.db.isNullConditional(cnd)) {
+    return { [cnd.key]: { [Op.eq]: null } }
   }
   throw new Error(`Unknown conditional type ${cnd.type}`)
 }

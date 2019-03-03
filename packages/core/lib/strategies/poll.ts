@@ -19,7 +19,8 @@ export type GeneratePollWaitTimesStrategy =
 
 /**
  * Performs the general polling loop.  The callback should handle its own
- * errors.
+ * errors.  It's up to the `registerPollCallback` to handle not recalling
+ * the poll if the server is told to stop.
  *
  * @param pollStrat
  * @param callback
@@ -41,6 +42,7 @@ export function pollLoop(
       .then(() => registerPollCallback(pollTime, pollCallback))
     // If the registerPollCallback call raises an error, it's a bad day.
   }
+  pollCallback()
 }
 
 

@@ -8,7 +8,10 @@ import {
 } from '../model'
 
 
-export interface ScheduledJobDataModel extends ScheduledJobModel {
+/** Marker for the data-storage version of the values. */
+export interface DataModel extends BaseModel { }
+
+export interface ScheduledJobDataModel extends ScheduledJobModel, DataModel {
   /**
    * Current owner of the lease, if locked.
    *
@@ -24,105 +27,109 @@ export interface ScheduledJobDataModel extends ScheduledJobModel {
   readonly leaseExpires: Date | null
 }
 
-export interface TaskDataModel extends TaskModel {
+export interface TaskDataModel extends TaskModel, DataModel {
 
 }
-
 
 /**
  * Simple API to allow for a "database" to back the datastore.  Implementors
  * need to create their own Database implementation.
  */
 
-export interface Conditional {
+export interface Conditional<T extends DataModel> {
   readonly type: string
 }
 
-export class EqualsConditional<T> implements Conditional {
+export class EqualsConditional<T extends DataModel, K extends keyof T> implements Conditional<T> {
   readonly type = 'eq'
   constructor(
-    public readonly key: string,
-    public readonly value: T
+    public readonly key: K,
+    public readonly value: T[K]
   ) { }
 }
 
-export function isEqualsConditional<T>(v: Conditional | undefined | null): v is EqualsConditional<T> {
+export function isEqualsConditional<T extends DataModel, K extends keyof T>(v: Conditional<T> | undefined | null): v is EqualsConditional<T, K> {
   return (!!v) && v.type === 'eq'
 }
 
-export class AfterDateConditional implements Conditional {
-  readonly type = '>date'
-  constructor(
-    public readonly key: string,
-
-    // Date value is in UTC.
-    public readonly after: Date
-  ) { }
-}
-
-export function isAfterDateConditional(v: Conditional | undefined | null): v is AfterDateConditional {
-  return (!!v) && v.type === '>date'
-}
-
-export class BeforeDateConditional implements Conditional {
+export class BeforeDateConditional<T extends DataModel> implements Conditional<T> {
   readonly type = '<date'
   constructor(
-    public readonly key: string,
+    public readonly key: keyof T,
 
     // Date value is in UTC.
     public readonly before: Date
   ) { }
 }
 
-export function isBeforeDateConditional(v: Conditional | undefined | null): v is BeforeDateConditional {
+export function isBeforeDateConditional<T extends DataModel>(v: Conditional<T> | undefined | null): v is BeforeDateConditional<T> {
   return (!!v) && v.type === '<date'
 }
 
 
-export class OneOfConditional<T> implements Conditional {
+export class OneOfConditional<T extends DataModel, K extends keyof T> implements Conditional<T> {
   readonly type = 'in'
   constructor(
-    public readonly key: string,
-    public readonly values: T[]
+    public readonly key: K,
+    public readonly values: (T[K])[]
   ) { }
 }
 
-export function isOneOfConditional<T>(v: Conditional | undefined | null): v is OneOfConditional<T> {
+export function isOneOfConditional<T extends DataModel, K extends keyof T>(v: Conditional<T> | undefined | null): v is OneOfConditional<T, K> {
   return (!!v) && v.type === 'in'
 }
 
-
-export class OrConditional implements Conditional {
-  readonly type = 'or'
+export class NullConditional<T extends DataModel> implements Conditional<T> {
+  readonly type = 'null'
   constructor(
-    public readonly conditionals: Conditional[],
+    public readonly key: keyof T
   ) { }
 }
 
-export function isOrConditional(v: Conditional | undefined | null): v is OrConditional {
+export function isNullConditional<T extends DataModel>(v: Conditional<T> | undefined | null): v is NullConditional<T> {
+  return (!!v) && v.type === 'null'
+}
+
+export class NotNullConditional<T extends DataModel> implements Conditional<T> {
+  readonly type = 'notnull'
+  constructor(
+    public readonly key: keyof T
+  ) { }
+}
+
+export function isNotNullConditional<T extends DataModel>(v: Conditional<T> | undefined | null): v is NullConditional<T> {
+  return (!!v) && v.type === 'notnull'
+}
+
+
+export class OrConditional<T extends DataModel> implements Conditional<T> {
+  readonly type = 'or'
+  constructor(
+    public readonly conditionals: Conditional<T>[],
+  ) { }
+}
+
+export function isOrConditional<T extends DataModel>(v: Conditional<T> | undefined | null): v is OrConditional<T> {
   return (!!v) && v.type === 'or'
 }
 
-export class AndConditional implements Conditional {
+export class AndConditional<T extends DataModel> implements Conditional<T> {
   readonly type = 'and'
   constructor(
-    public readonly conditionals: Conditional[]
+    public readonly conditionals: Conditional<T>[]
   ) { }
 }
 
-export function isAndConditional(v: Conditional | undefined | null): v is AndConditional {
+export function isAndConditional<T extends DataModel>(v: Conditional<T> | undefined | null): v is AndConditional<T> {
   return (!!v) && v.type === 'and'
 }
 
 
-export interface Database {
-  updateSchema(): Promise<void>
-
-  conditionalUpdate<T extends BaseModel>(
-    modelName: string,
+export interface DbTableController<T extends DataModel> {
+  conditionalUpdate(
     primaryKey: PrimaryKeyType,
     newValues: Partial<T>,
-    conditional?: Conditional
+    conditional?: Conditional<T>
   ): Promise<number>
 
   /**
@@ -131,20 +138,25 @@ export interface Database {
    * primary key provider that creates it should be robust enough to prevent
    * these issues.
    *
-   * @param modelName
    * @param values
    */
-  create<T extends BaseModel>(
-    modelName: string,
+  create(
     values: T
   ): Promise<void>
 
-  find<T extends BaseModel>(
-    modelName: string,
+  find(
     startIndex: number,
     maximumRecordCount: number,
-    conditional?: Conditional
+    conditional?: Conditional<T>
   ): Promise<T[]>
 
-  remove(modelName: string, primaryKey: PrimaryKeyType, conditional?: Conditional): Promise<number>
+  remove(primaryKey: PrimaryKeyType, conditional?: Conditional<T>): Promise<number>
+}
+
+
+export interface Database {
+  updateSchema(): Promise<void>
+
+  readonly scheduledJobTable: DbTableController<ScheduledJobDataModel>
+  readonly taskTable: DbTableController<TaskDataModel>
 }

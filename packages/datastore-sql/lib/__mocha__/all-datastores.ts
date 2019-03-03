@@ -2,12 +2,10 @@ import chai from 'chai'
 import { Sequelize } from 'sequelize-typescript'
 import {
   TernClient,
-  JobExecutionManager,
   JobExecutionEventEmitter,
-  StartJob,
-  JobExecutionStateCompleted,
   TernConfiguration,
-  TaskCreationStrategyAfterCreation,
+  strategies,
+  executor,
 } from '@tern-scheduler/core'
 import {
   createSqlDataStore
@@ -32,7 +30,7 @@ export function standardDataStoreTests(sequelize: Sequelize) {
         currentTimeUTCStrategy: () => now,
         registerPollCallback: (_, callback) => { setImmediate(callback) }
       })
-      config.strategies.taskCreationStrategyRegistry.register('tcs', <TaskCreationStrategyAfterCreation>{
+      config.strategies.taskCreationStrategyRegistry.register('tcs', <strategies.TaskCreationStrategyAfterCreation>{
         after: 'new',
         createFromNewSchedule: (onCreate: Date) => onCreate
       })
@@ -52,26 +50,33 @@ export function standardDataStoreTests(sequelize: Sequelize) {
           scheduleDefinition: 'sd',
           taskCreationStrategy: 'tcs'
         })
+        .then(createdSchedulePk =>
+          datastore.getScheduledJob(createdSchedulePk)
+        )
         .then(createdSchedule => {
+          expect(createdSchedule).to.not.be.null
+          if (!createdSchedule) { return }
           expect(createdSchedule.displayName).to.equal('j1')
-          expect(createdSchedule.createdOn).to.equal(now)
+          // Need to check the valueOf, because some returned SQL stored date values
+          // do not return an equivalent object.
+          expect(createdSchedule.createdOn.valueOf()).to.equal(now.valueOf())
         })
     })
   })
 }
 
-class TestJobExecutionManager implements JobExecutionManager {
+class TestJobExecutionManager implements executor.JobExecutionManager {
   readonly createdJobs: { taskId: string, jobName: string, context: string }[] = []
   messaging!: JobExecutionEventEmitter | null
   withMessaging(messaging: JobExecutionEventEmitter) {
     this.messaging = messaging
     return this
   }
-  startJob: StartJob = (taskId: string, jobName: string, context: string) => {
+  startJob: executor.StartJob = (taskId: string, jobName: string, context: string) => {
     this.createdJobs.push({ taskId, jobName, context })
     const execId = this.createdJobs.length.toString()
     this.messaging && this.messaging.emit('jobExecutionFinished', execId,
-      <JobExecutionStateCompleted>{ state: 'completed', result: context })
+      <executor.JobExecutionStateCompleted>{ state: 'completed', result: context })
     return Promise.resolve(execId)
   }
 }

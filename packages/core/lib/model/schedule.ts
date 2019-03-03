@@ -1,25 +1,24 @@
 
-import { BaseModel } from './base';
+import { BaseModel, PrimaryKeyType } from './base';
 
-export type SCHEDULE_STATE_DISABLED = 'disabled'
-/** Cannot be triggered for running. */
-export const SCHEDULE_STATE_DISABLED = 'disabled'
+export type SCHEDULE_STATE_ADD_TASK = 'add-task'
+export const SCHEDULE_STATE_ADD_TASK = 'add-task'
 
-export type SCHEDULE_STATE_ACTIVE = 'active'
-/** The record is available for updates. */
-export const SCHEDULE_STATE_ACTIVE = 'active'
+export type SCHEDULE_STATE_START_TASK = 'start-task'
+export const SCHEDULE_STATE_START_TASK = 'start-task'
 
-export type SCHEDULE_STATE_UPDATING = 'updating'
-/** A server marked the record as being updated */
-export const SCHEDULE_STATE_UPDATING = 'updating'
+export type SCHEDULE_STATE_END_TASK = 'end-task'
+export const SCHEDULE_STATE_END_TASK = 'end-task'
+
+export type SCHEDULE_STATE_PASTURE = 'pasture'
+export const SCHEDULE_STATE_PASTURE = 'pasture'
 
 export type SCHEDULE_STATE_REPAIR = 'repair'
-/** The server who owns the queue encountered an error trying to start the task. */
 export const SCHEDULE_STATE_REPAIR = 'repair'
 
-export type ScheduleStateType =
-  SCHEDULE_STATE_DISABLED | SCHEDULE_STATE_ACTIVE |
-  SCHEDULE_STATE_UPDATING | SCHEDULE_STATE_REPAIR
+export type ScheduleUpdateStateType =
+  SCHEDULE_STATE_ADD_TASK | SCHEDULE_STATE_START_TASK | SCHEDULE_STATE_END_TASK |
+  SCHEDULE_STATE_PASTURE | SCHEDULE_STATE_REPAIR
 
 /**
  * Name of the instance that requests the lease, and must be unique across instances.  This can be IP + PID.
@@ -37,11 +36,23 @@ export const SCHEDULE_MODEL_NAME = 'schedule'
  */
 export interface ScheduledJobModel extends BaseModel {
   /**
-   * Current job state.
+   * Current state; non-null means that some scheduler is updating
+   * the task or the schedule.
    *
    * Alterable after creation.
    */
-  readonly state: ScheduleStateType
+  readonly updateState: ScheduleUpdateStateType | null
+  /**
+   * If the lease is to alter a task, then this field
+   * is taht task's primary key.
+   */
+  readonly updateTaskPk: PrimaryKeyType | null
+
+  /**
+   * Is the scheduled job out to pasture, meaning that its only next state
+   * is deleted.  Must be separate from the other state,
+   */
+  readonly pasture: boolean
 
   readonly displayName: string
   readonly description: string
@@ -79,4 +90,11 @@ export interface ScheduledJobModel extends BaseModel {
   // a custom data storage based upon the taskCreationStrategy;
   // usually a JSON encoded object.
   readonly scheduleDefinition: string
+
+  /**
+   * Allows for linking schedules together in a directed graph.  Useful for
+   * finding history of a schedule that was changed or suspended.
+   */
+  readonly previousSchedule: PrimaryKeyType | null
+  readonly previousReason: string | null
 }

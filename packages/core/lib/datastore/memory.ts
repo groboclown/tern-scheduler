@@ -5,9 +5,6 @@ import * as impl from './db-impl'
 import * as model from '../model'
 import * as errors from '../errors'
 
-const TABLES = [model.SCHEDULE_MODEL_NAME, model.TASK_MODEL_NAME]
-
-
 
 export function createMemoryDataStore(): DataStore {
   return new impl.DatabaseDataStore(new MemoryDatabase())
@@ -15,7 +12,7 @@ export function createMemoryDataStore(): DataStore {
 
 
 
-function conditionalMatchesRecord(record: any, cnd: api.Conditional): boolean {
+function conditionalMatchesRecord<T extends model.BaseModel>(record: any, cnd: api.Conditional<T>): boolean {
   if (!record) {
     return false
   }
@@ -41,13 +38,15 @@ function conditionalMatchesRecord(record: any, cnd: api.Conditional): boolean {
     const val = record[cnd.key]
     return val === cnd.value
   }
-  if (api.isAfterDateConditional(cnd)) {
-    const val = record[cnd.key]
-    return val instanceof Date && cnd.after > val
-  }
   if (api.isBeforeDateConditional(cnd)) {
     const val = record[cnd.key]
     return val instanceof Date && cnd.before < val
+  }
+  if (api.isNotNullConditional(cnd)) {
+    return record[cnd.key] !== null
+  }
+  if (api.isNullConditional(cnd)) {
+    return record[cnd.key] === null
   }
   if (api.isOneOfConditional(cnd)) {
     const val = record[cnd.key]
@@ -57,25 +56,76 @@ function conditionalMatchesRecord(record: any, cnd: api.Conditional): boolean {
 }
 
 
-function matchesRecord<T extends model.BaseModel>(row: T, conditional: api.Conditional): boolean {
+function matchesRecord<T extends model.BaseModel>(row: T, conditional: api.Conditional<T>): boolean {
   const arow = row as any
   return conditionalMatchesRecord(arow, conditional)
 }
 
-
-class Table<T extends model.BaseModel> {
+class MemTable<T extends api.DataModel> implements api.DbTableController<T> {
   readonly rows: T[] = []
   readonly pks: { [pk: string]: boolean } = {}
   constructor(readonly name: string) { }
 
-  matches(primaryKey: model.PrimaryKeyType | null, conditional?: api.Conditional): T[] {
+  conditionalUpdate(
+    primaryKey: model.PrimaryKeyType,
+    newValues: Partial<T>,
+    conditional?: api.Conditional<T>
+  ): Promise<number> {
+    const nv = <any>newValues
+    const matches = this._matches(primaryKey, conditional)
+    matches.forEach(row => {
+      // Ignore the read-only aspects, and any model restrictions...
+      const r = <any>row
+      Object.keys(newValues).forEach(key => {
+        if (key !== 'pk') {
+          r[key] = nv[key]
+        }
+      })
+    })
+    return Promise.resolve(matches.length)
+  }
+
+  /**
+   * Returned promise should have a `DuplicatePrimaryKeyError` problem if the
+   * primary key for the value is already in the data store.  However, the
+   * primary key provider that creates it should be robust enough to prevent
+   * these issues.
+   *
+   * @param values
+   */
+  create(
+    values: T
+  ): Promise<void> {
+    if (!this._add(values)) {
+      return Promise.reject(new errors.DuplicatePrimaryKeyError(this.name, values.pk))
+    }
+    return Promise.resolve()
+  }
+
+  find(
+    startIndex: number,
+    maximumRecordCount: number,
+    conditional?: api.Conditional<T>
+  ): Promise<T[]> {
+    // Need to split this up into separate calls.
+    const allMatches = this._matches(null, conditional)
+    allMatches.splice(0, startIndex)
+    allMatches.splice(maximumRecordCount)
+    return Promise.resolve(allMatches)
+  }
+
+  remove(primaryKey: model.PrimaryKeyType, conditional?: api.Conditional<T>): Promise<number> {
+    return Promise.resolve(this._remove(primaryKey, conditional) ? 1 : 0)
+  }
+
+  private _matches(primaryKey: model.PrimaryKeyType | null, conditional?: api.Conditional<T>): T[] {
     return this.rows.filter(
       v => (!primaryKey || v.pk === primaryKey)
         && (!conditional || matchesRecord(v, conditional))
     )
   }
 
-  add(row: T): boolean {
+  private _add(row: T): boolean {
     const pk = row.pk
     if (!pk || !!(this.pks[pk])) {
       return false
@@ -87,7 +137,7 @@ class Table<T extends model.BaseModel> {
     return true
   }
 
-  remove(primaryKey: model.PrimaryKeyType, conditional?: api.Conditional): boolean {
+  private _remove(primaryKey: model.PrimaryKeyType, conditional?: api.Conditional<T>): boolean {
     for (let i = 0; i < this.rows.length; i++) {
       if (this.rows[i].pk === primaryKey) {
         if (!conditional || matchesRecord(this.rows[i], conditional)) {
@@ -107,68 +157,10 @@ class Table<T extends model.BaseModel> {
  * An in-memory version of the data store.  Not usable for anything except local testing.
  */
 export class MemoryDatabase implements api.Database {
-  private readonly tables: { [name: string]: Table<any> } = {}
-
-  // Method used by tests to get access to the underlying data.
-  testAccess(modelName: string): Table<any> | undefined {
-    return this.tables[modelName]
-  }
+  readonly scheduledJobTable = new MemTable<api.ScheduledJobDataModel>('ScheduledJob')
+  readonly taskTable = new MemTable<api.TaskDataModel>('ScheduledJob')
 
   updateSchema(): Promise<void> {
-    TABLES.forEach(modelName => {
-      this.tables[modelName] = new Table<any>(modelName)
-    })
     return Promise.resolve()
-  }
-
-  conditionalUpdate<T extends model.BaseModel>(modelName: string, primaryKey: model.PrimaryKeyType, newValues: Partial<T>, conditional?: api.Conditional): Promise<number> {
-    const table = this.tables[modelName]
-    if (!table) {
-      return Promise.reject(new Error(`unknown model name ${modelName}`))
-    }
-    const nv = <any>newValues
-    const matches = table.matches(primaryKey, conditional)
-    matches.forEach(row => {
-      // Ignore the read-only aspects, and any model restrictions...
-      const r = <any>row
-      Object.keys(newValues).forEach(key => {
-        if (key !== 'pk') {
-          r[key] = nv[key]
-        }
-      })
-    })
-    return Promise.resolve(matches.length)
-  }
-
-  create<T extends model.BaseModel>(modelName: string, values: T): Promise<void> {
-    const table = this.tables[modelName]
-    if (!table) {
-      return Promise.reject(new errors.NoSuchModelError(modelName))
-    }
-    if (!table.add(values)) {
-      return Promise.reject(new errors.DuplicatePrimaryKeyError(modelName, values.pk))
-    }
-    return Promise.resolve()
-  }
-
-
-  find<T extends model.BaseModel>(modelName: string, startIndex: number, maximumRecordCount: number, conditional?: api.Conditional): Promise<T[]> {
-    const table = this.tables[modelName]
-    if (!table) {
-      return Promise.reject(new errors.NoSuchModelError(modelName))
-    }
-    // Need to split this up into separate calls.
-    const allMatches = table.matches(null, conditional)
-    allMatches.splice(0, startIndex)
-    allMatches.splice(maximumRecordCount)
-    return Promise.resolve(allMatches)
-  }
-
-  remove(modelName: string, primaryKey: string, conditional?: api.Conditional): Promise<number> {
-    const table = this.tables[modelName]
-    if (!table) {
-      return Promise.reject(new errors.NoSuchModelError(modelName))
-    }
-    return Promise.resolve(table.remove(primaryKey, conditional) ? 1 : 0)
   }
 }
