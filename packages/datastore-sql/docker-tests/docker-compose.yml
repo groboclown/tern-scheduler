@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: tern-mysql
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - 19000:3306
+    environment:
+      MYSQL_USER: "tern-user"
+      MYSQL_PASSWORD: "tern-pw"
+      MYSQL_RANDOM_ROOT_PASSWORD: yes
+      MYSQL_DATABASE: "tern"
+
+  postgres:
+    image: postgres:alpine
+    ports:
+      - 19001:5432
+    environment:
+      POSTGRES_USER: "tern-user"
+      POSTGRES_PASSWORD: "tern-pw"
+      POSTGRES_DB: "tern"
+

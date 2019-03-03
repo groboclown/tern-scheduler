@@ -7,6 +7,8 @@ describe('PostGreSQL compatibility', () => {
   const sqlDb = process.env.POSTGRES_DB
   const sqlUser = process.env.POSTGRES_USERNAME
   const sqlPasswd = process.env.POSTGRES_PASSWORD
+  const sqlHost = process.env.POSTGRES_HOST || 'localhost'
+  const sqlPort = process.env.POSTGRES_PORT || '5432'
   if (!sqlDb || !sqlUser || !sqlPasswd) {
     describe('no PostGreSQL compatiblity setup', () => {
       it('requires env values POSTGRES_DB and POSTGRES_USERNAME and POSTGRES_PASSWORD', () => {
@@ -20,6 +22,8 @@ describe('PostGreSQL compatibility', () => {
     database: sqlDb,
     username: sqlUser,
     password: sqlPasswd,
+    host: sqlHost,
+    port: Number(sqlPort),
     dialect: 'postgres',
   })
 
