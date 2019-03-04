@@ -51,7 +51,7 @@ $ POSTGRES_DB=tern POSTGRES_USERNAME=tern-user POSTGRES_PASSWORD=tern-pw POSTGRE
 
 ## Microsoft SQL Server
 
-In order to run the Microsoft SQL Server, you need to accept the [license agreement](https://go.microsoft.com/fwlink/?linkid=857698)![extern](../../site/img/extern.svg), and acknowledge this by passing `ACCEPT_EULA=Y` environment variable.
+In order to run the Microsoft SQL Server, you need to accept the [license agreement](https://go.microsoft.com/fwlink/?linkid=857698)![extern](../../../site/img/extern.svg), and acknowledge this by passing `ACCEPT_EULA=Y` environment variable.
 
 ```(bash)
 $ docker run --name tern-mssql \

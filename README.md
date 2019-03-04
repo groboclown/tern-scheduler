@@ -21,7 +21,7 @@ Tern is still under development, but it is being developed with these goals:
 * **Configurable Technology.**  Want to use a specific back-end data store?  Want to use a messaging system?  Need a specific REST API provider?  Tern is developed with flexibility in mind.  It provides some common back-ends, with clear instructions on what you need to do to add your own.
 * **Job retry.**  The scheduler allows for a job execution framework to retry running a job at some future time.
 * **Time Zone Awareness.**  Requests need to include a timezone parameter, and the server needs to be aware of the differences between the *requested* time zone and the *server* time zone.
-* **Typescript**  Built with type safety and is out-of-the-box ready for your typescript application.
+* **Typescript.**  Built with type safety and is out-of-the-box ready for your typescript application.
 
 The following are anti-goals for the project:
 
@@ -134,7 +134,8 @@ Tern was designed to allow for different data storage technologies, depending up
 
 If you are running with one of the out-of-the-box data stores, you just need to `require` the module and instantiate it according to its instructions (such as providing connection information).  Right now, those modules are:
 
-* `require('tern-scheduler/core').createMemoryDataStore()` - an in-memory data storage which is only useful for local testing.  It cannot work with multiple instances of the service.
+* `require('@tern-scheduler/core').createMemoryDataStore()` - an in-memory data storage which is only useful for local testing.  It cannot work with multiple instances of the service.
+* [`@tern-scheduler/datastore-sql`](packages/datastore-sql/README.md) - uses the `sequelize` module to connect to SQLite, MySQL, PostGreSQL, and Microsoft SQL Server databases.
 
 
 ### Choosing a Job Executor
@@ -220,19 +221,19 @@ The server that handled the state change creates a message that indicates the st
 The implementation uses a variation on the [two-phase commit protocol](https://en.wikipedia.org/wiki/Two-phase_commit_protocol)![extern](./site/img/extern.svg) with lease expiration to allow for recovering from failed nodes.  Additionally, attempts to obtain the lock have retry mechanisms with an eventual failure.  Locks are made on the scheduled job to perform operations on the scheduled job itself or on its child task objects (with a few rare and well considered exceptions).
 
 1. Commit request phase
-  * In this phase, a process (a thread of behavior within a node) makes an atomic conditional write operation to the data store to allocate the lock.  If the lock is already allocated, the request fails.  Note that this takes advantage of whatever locking mechanism the underlying data store has.
-  * Failures can be retried with different timeouts (that's one of the strategies).  After sufficient number of retries, the lock acquisition fails.
-  * Success puts the scheduled job in the "updating" state, which is the "lock obtained" phase.
-1. Commit phase
-  * The process, which now has a lease on the lock, performs an update to the data objects.  These operations should be very tightly controlled and "quick".  As the library is written now, this phase includes only data store manipulations plus the one call-out to the job execution service.
-  * Any unexpected failures here put the scheduled job in an "update-error" state, which means that the scheduled job and its tasks must be repaired before it can be unlocked.
-1. Commit complete phase
-  * Once the in-lock actions complete, the process releases the lock.
-  * This might fail due to something else "stealing" the lock if the lease expired.
-1. Lock repair phase
-  * If a scheduled job is in the "update-error" state, then its state is indeterminate.
-  * If the lock has expired, then its state should be determined through the task state.
-  * If the software determines that it wasn't due to a Tern coding error, then the state should be repaired based on the states of its running tasks.
+   * In this phase, a process (a thread of behavior within a node) makes an atomic conditional write operation to the data store to allocate the lock.  If the lock is already allocated, the request fails.  Note that this takes advantage of whatever locking mechanism the underlying data store has.
+   * Failures can be retried with different timeouts (that's one of the strategies).  After sufficient number of retries, the lock acquisition fails.
+   * Success puts the scheduled job in the "updating" state, which is the "lock obtained" phase.
+2. Commit phase
+   * The process, which now has a lease on the lock, performs an update to the data objects.  These operations should be very tightly controlled and "quick".  As the library is written now, this phase includes only data store manipulations plus the one call-out to the job execution service.
+   * Any unexpected failures here put the scheduled job in an "update-error" state, which means that the scheduled job and its tasks must be repaired before it can be unlocked.
+3. Commit complete phase
+   * Once the in-lock actions complete, the process releases the lock.
+   * This might fail due to something else "stealing" the lock if the lease expired.
+4. Lock repair phase
+   * If a scheduled job is in the "update-error" state, then its state is indeterminate.
+   * If the lock has expired, then its state should be determined through the task state.
+   * If the software determines that it wasn't due to a Tern coding error, then the state should be repaired based on the states of its running tasks.
 
 
 ## Implementation TO-DOs
