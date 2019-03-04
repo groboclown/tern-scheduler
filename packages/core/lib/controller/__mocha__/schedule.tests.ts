@@ -13,6 +13,8 @@ import {
   ScheduleUpdateStateType,
   SCHEDULE_STATE_START_TASK,
   SCHEDULE_STATE_PASTURE,
+  SCHEDULE_STATE_ADD_TASK,
+  SCHEDULE_STATE_REPAIR,
 } from '../../model/schedule'
 import {
   NewScheduledJob,
@@ -72,7 +74,7 @@ describe('schedule controller', () => {
       previousReason: null,
     }
   }
-  describe('#createScheduledJob', () => {
+  describe('#createScheduledJobAlone', () => {
     describe('When the db is connected', () => {
       it('is created just fine', () => {
         const db = new MemoryDatabase()
@@ -87,8 +89,90 @@ describe('schedule controller', () => {
             expect(db.scheduledJobTable.rows[0]).to.deep.equal(mkExpectedCreatedJob({ updateState: null }))
           })
       })
+      it('reports correct problem when withLease throws exception', () => {
+        const db = new MemoryDatabase()
+        const store = new DatabaseDataStore(db)
+        const mSpy = new MessagingSpy()
+        const err = new Error(`withLease problem`)
+        store.updateSchema()
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job, taskPk) => {
+          expect(job.updateState).to.equal(SCHEDULE_STATE_ADD_TASK)
+          expect(taskPk).to.equal(createdPk)
+          throw err
+        })
+          .then(() => fail(`Did not throw expected error`))
+          .catch(e => {
+            expect(e).to.equal(err)
+            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+            const row = db.scheduledJobTable.rows[0]
+            // Needs repair, which means that the state is not "in repair",
+            // but at the last state it was in + expired leased
+            expect(row.updateState).to.equal(SCHEDULE_STATE_ADD_TASK)
+            expect(row.leaseOwner).to.equal(createOwner)
+            expect(row.leaseExpires).is.not.null
+            if (!row.leaseExpires) { return }
+            expect(row.leaseExpires.valueOf()).to.equal(now.valueOf())
+          })
+      })
+      it('reports correct problem when withLease returns rejected promise', () => {
+        const db = new MemoryDatabase()
+        const store = new DatabaseDataStore(db)
+        const mSpy = new MessagingSpy()
+        const err = new Error(`withLease problem`)
+        store.updateSchema()
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job, taskPk) => {
+          expect(job.updateState).to.equal(SCHEDULE_STATE_ADD_TASK)
+          expect(taskPk).to.equal(createdPk)
+          return Promise.reject(err)
+        })
+          .then(() => fail(`Did not throw expected error`))
+          .catch(e => {
+            expect(e).to.equal(err)
+            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+            const row = db.scheduledJobTable.rows[0]
+            // Needs repair, which means that the state is not "in repair",
+            // but at the last state it was in + expired leased
+            expect(row.updateState).to.equal(SCHEDULE_STATE_ADD_TASK)
+            expect(row.leaseOwner).to.equal(createOwner)
+            expect(row.leaseExpires).is.not.null
+            if (!row.leaseExpires) { return }
+            expect(row.leaseExpires.valueOf()).to.equal(now.valueOf())
+            return Promise.resolve()
+          })
+      })
+
+      describe('and the lease is stolen from under the creation', () => {
+        it('reports an error', () => {
+          // Lease stealing is only done if the repair started.
+          const db = new MemoryDatabase()
+          const store = new DatabaseDataStore(db)
+          const mSpy = new MessagingSpy()
+          store.updateSchema()
+          return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => {
+            // Switch out the lease and state to repair mode.
+            setLockState(db, job.pk, 'otherOwner', SCHEDULE_STATE_REPAIR, db.scheduledJobTable.rows[0].leaseExpires)
+            return { value: 1 }
+          })
+            .then(() => fail(`Did not throw expected error`))
+            .catch(e => {
+              expect(e).to.be.instanceOf(LeaseNotOwnedError)
+              expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+              const row = db.scheduledJobTable.rows[0]
+              // Needs repair, which means that the state is not "in repair",
+              // but at the last state it was in + expired leased
+              expect(row.updateState).to.equal(SCHEDULE_STATE_REPAIR)
+              expect(row.leaseOwner).to.equal('otherOwner')
+              expect(row.leaseExpires).to.be.greaterThan(now)
+              return Promise.resolve()
+            })
+        })
+
+      })
     })
-    describe('When the DataStore has a problem', () => {
+  })
+
+  describe('When the DataStore has a problem', () => {
+    describe('with addScheduledJobModel', () => {
       it('reports the datastore error itself', () => {
         const db = new MemoryDatabase()
         const store = new DatabaseDataStore(db)
@@ -107,6 +191,34 @@ describe('schedule controller', () => {
           })
       })
     })
+    describe('with cascading failures', () => {
+      it('reports the datastore errors to the right places', () => {
+        const db = new MemoryDatabase()
+        const store = new DatabaseDataStore(db)
+        const mSpy = new MessagingSpy()
+        const err1 = new Error('add err')
+        const err2 = new Error('need repair err')
+        store.addScheduledJobModel = () => {
+          return Promise.reject(err1)
+        }
+        store.markLeasedScheduledJobNeedsRepair = () => {
+          return Promise.reject(err2)
+        }
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
+          .then(() => { fail(`did not throw error`) })
+          .catch(e => {
+            // Report the original error
+            expect(e).to.equal(err1)
+            // But message the final error
+            sinon.assert.calledOnce(mSpy.generalError)
+            sinon.assert.calledWith(mSpy.generalError, err2)
+            // No point in checking if it exists in the store, since we
+            // mocked up what the store does.
+            return Promise.resolve()
+          })
+      })
+    })
+
   })
 
   describe('#runUpdateInLease', () => {

@@ -5,7 +5,7 @@ export {
 } from './api'
 
 export {
-  UUIDHostname,
+  UUIDConfig,
   UUIDCreateLeaseIdStrategy,
   addUUIDCreateLeaseIdStrategy,
 } from './uuid'

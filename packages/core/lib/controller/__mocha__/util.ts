@@ -56,14 +56,14 @@ export function setLockState(
   store: MemoryDatabase,
   pk: PrimaryKeyType,
   leaseOwner: LeaseIdType | null,
-  leaseState: ScheduleUpdateStateType | null,
+  updateState: ScheduleUpdateStateType | null,
   leaseExpires: Date | null
 ): ScheduledJobModel {
   // Cast row to any to allow writes
   const row = getScheduleRow(store, pk)
   const arow = <any>row
   arow.leaseOwner = leaseOwner
-  arow.leaseState = leaseState
+  arow.updateState = updateState
   arow.leaseExpires = leaseExpires
   return row
 }

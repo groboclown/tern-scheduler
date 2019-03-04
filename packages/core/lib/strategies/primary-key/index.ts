@@ -5,6 +5,6 @@ export {
 } from './api'
 
 export {
-  UUIDHostname,
+  UUIDConfig,
   addUUIDCreatePrimaryKeyStrategy,
 } from './uuid'

@@ -8,7 +8,7 @@ import {
   LeaseIdType,
 } from '../../model'
 
-export const UUIDHostname = {
+export const UUIDConfig = {
   hostname:
     process.env.HOSTNAME === undefined
       ? 'localhost'
@@ -16,12 +16,12 @@ export const UUIDHostname = {
 }
 
 export const UUIDCreateLeaseIdStrategy: CreateLeaseIdStrategy = (): LeaseIdType => {
-  return uuid5(UUIDHostname.hostname, uuid5.DNS)
+  return uuid5(UUIDConfig.hostname, uuid5.DNS)
 }
 
-export const UUID_PK_STRAT_NAME = 'uuid'
+export const UUID_LEASE_ID_STRAT_NAME = 'uuid'
 
 
 export function addUUIDCreateLeaseIdStrategy(registry: CreateLeaseIdStrategyRegistry): void {
-  registry.register(UUID_PK_STRAT_NAME, UUIDCreateLeaseIdStrategy)
+  registry.register(UUID_LEASE_ID_STRAT_NAME, UUIDCreateLeaseIdStrategy)
 }

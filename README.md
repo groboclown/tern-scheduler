@@ -237,21 +237,13 @@ The implementation uses a variation on the [two-phase commit protocol](https://e
 
 ## Implementation TO-DOs
 
-### Repairing and Disabled and Delete Scheduled Jobs
+### Scheduled Job Delete
 
-There are a lot of problems with disabled jobs as they stand now.
+Deleting scheduled jobs is broken right now - it will leave tasks without parents.  So it's currently disabled.
 
-* Lease state is separate from other state.  Lease state is either "null" (not leased) or one of:
-  * Add Task + added task PK
-  * Update Task + task PK
-  * Repair Task + task PK
-  * Pasture schedule
-  This is primarily possible because PK creation is done outside the data store.
-* Pasture flag.  It's put out to pasture and ready for the grave.  Pastured schedules allow tasks to run as normal, but new tasks are created only on retry.
+### Repair
 
-All these states allow for easier inspection of state when the task goes into repair mode.
-
-Deleting scheduled jobs is broken right now - it will leave tasks without parents.
+Repairing scheduled jobs and tasks in an uncertain state needs to be handled.  The code is present to detect them and trigger a fix execution, but the fix needs to be written.
 
 ### One Time Task Removal
 

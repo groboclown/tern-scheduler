@@ -1,9 +1,4 @@
 
-/**
- * Augments to the DataStore behavior...
- */
-
-
 import {
   PrimaryKeyType,
   LeaseIdType,

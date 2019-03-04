@@ -8,7 +8,7 @@ import {
   PrimaryKeyType,
 } from '../../model'
 
-export const UUIDHostname = {
+export const UUIDConfig = {
   hostname:
     process.env.HOSTNAME === undefined
       ? 'localhost'
@@ -16,7 +16,7 @@ export const UUIDHostname = {
 }
 
 export const UUIDCreatePrimaryKeyStrategy: CreatePrimaryKeyStrategy = (): PrimaryKeyType => {
-  return uuid5(UUIDHostname.hostname, uuid5.DNS)
+  return uuid5(UUIDConfig.hostname, uuid5.DNS)
 }
 
 export const UUID_PK_STRAT_NAME = 'uuid'
