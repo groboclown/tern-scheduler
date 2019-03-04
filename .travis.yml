@@ -37,7 +37,7 @@ env:
 #before_install:
 
 install:
-  - docker-compose -f packages/datastore-sql/docker-tests/docker-compose.yml up
+  - docker-compose -f packages/datastore-sql/docker-tests/docker-compose.yml up -d
   - npm install
   - npm run bootstrap
 
