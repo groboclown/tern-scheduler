@@ -40,6 +40,10 @@ install:
   - docker-compose -f packages/datastore-sql/docker-tests/docker-compose.yml up -d
   - npm install
   - npm run bootstrap
+  # Wait for the docker services to start
+  - echo "Waiting for MySQL" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19000
+  - echo "Waiting for PostGreSQL" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19001
+  - echo "Waiting for MS SQL" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19002
 
 jobs:
   include:
