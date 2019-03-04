@@ -10,7 +10,7 @@ services:
     environment:
       MYSQL_USER: "tern-user"
       MYSQL_PASSWORD: "tern-pw"
-      MYSQL_RANDOM_ROOT_PASSWORD: yes
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
       MYSQL_DATABASE: "tern"
 
   postgres:
@@ -21,4 +21,12 @@ services:
       POSTGRES_USER: "tern-user"
       POSTGRES_PASSWORD: "tern-pw"
       POSTGRES_DB: "tern"
+
+  mssql:
+    image: microsoft/mssql-server-linux:latest
+    ports:
+      - 19002:1433
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "tern-pw-1234"
 

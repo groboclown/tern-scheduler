@@ -37,13 +37,13 @@ env:
 #before_install:
 
 install:
+  - docker-compose -f packages/datastore-sql/docker-tests/docker-compose.yml up
   - npm install
   - npm run bootstrap
-  - docker-compose -f packages/datastore-sql/docker-tests/docker-compose.yml up
 
 jobs:
   include:
     - stage: "Build and Test"
-      name: "TypeScript Compile"
+      name: "TypeScript Compile and Test"
       script: "npm run build && npm run test"
 
