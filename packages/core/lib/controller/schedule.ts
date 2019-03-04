@@ -128,6 +128,7 @@ export function createScheduledJobAlone<T>(
     updateTaskPk: createdTaskPk,
     previousSchedule: scheduledJob.previousSchedule || null,
     previousReason: scheduledJob.previousReason || null,
+    repairState: null,
   }
   logDebug('createScheduledJobAlone', `starting addScheduledJobModel`)
 

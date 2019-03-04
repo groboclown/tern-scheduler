@@ -4,7 +4,9 @@
   "description": "Basic Stand-Alone service for the Tern Task Scheduler Service for Node",
   "main": "index.js",
   "scripts": {
-    "test": "exit 1"
+    "#not-ready": "No code yet, so this doesn't do anything for these parts of the automated build processing",
+    "build": "exit 0",
+    "test": "exit 0"
   },
   "keywords": [
     "scheduler",

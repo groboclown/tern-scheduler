@@ -1,0 +1,29 @@
+language: node_js
+node_js:
+  - "node"
+cache: npm
+addons:
+  apt:
+    update: true
+    packages:
+      - sqlite3
+
+services:
+  # Use docker for the databases, so that we can support Microsoft SQL Server in the tests.
+  - docker
+
+#before_install:
+
+install:
+  - npm install
+  - npm run bootstrap
+  - docker-compose -f packages/datastore-sql/docker-tests/docker-compose.yml up
+
+jobs:
+  include:
+    - stage: "Build"
+      name: "TypeScript Compile"
+      script: "npm run build"
+    - stage: "Test"
+      name: "Unit and Integration Tests"
+      script: "npm run test"

@@ -72,6 +72,7 @@ describe('schedule controller', () => {
       pasture: args.pasture === true,
       previousSchedule: null,
       previousReason: null,
+      repairState: null,
     }
   }
   describe('#createScheduledJobAlone', () => {

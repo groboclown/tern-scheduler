@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "build": "node_modules/.bin/tsc",
-    "test": "node_modules/.bin/mocha --require ts-node/register \"./lib/**/__mocha__/*.tests.ts\"",
-    "#test:watch": "See https://github.com/mochajs/mocha/issues/3748 for bugs with the watch expression and ts-node",
-    "test:watch": "node_modules/.bin/mocha --require ts-node/register --reporter min --watch \"./lib/**/__mocha__/*.tests.ts\""
+    "test-base": "node_modules/.bin/mocha",
+    "test": "node_modules/.bin/nyc mocha",
+    "report": "node_modules/.bin/nyc report",
+    "lint": "node_modules/.bin/tslint index.ts \"./lib/**/*.ts\""
   },
   "keywords": [
     "scheduler",
@@ -32,11 +33,13 @@
     "chai": "^4.2.0",
     "mocha": "^6.0.1",
     "mysql": "^2.16.0",
+    "nyc": "^13.3.0",
     "pg": "^7.8.1",
     "sinon": "^7.2.4",
     "sqlite": "^3.0.2",
     "tedious": "^5.0.3",
     "ts-node": "^8.0.2",
+    "tslint": "^5.13.1",
     "typescript": "^3.3.3"
   },
   "dependencies": {
@@ -45,5 +48,33 @@
     "sequelize": "^4.42.1",
     "sequelize-typescript": "^0.6.7"
   },
-  "mocha": {}
+  "mocha": {
+    "require": [
+      "ts-node/register"
+    ],
+    "spec": [
+      "lib/**/__mocha__/*.tests.ts"
+    ],
+    "full-trace": true,
+    "bail": true
+  },
+  "nyc": {
+    "include": [
+      "index.ts",
+      "lib/**/*.ts"
+    ],
+    "extension": [
+      ".ts"
+    ],
+    "exclude": [
+      "lib/**/__mocha__/*.ts"
+    ],
+    "reporter": [
+      "text-summary",
+      "json",
+      "html"
+    ],
+    "sourceMap": true,
+    "instrument": true
+  }
 }
