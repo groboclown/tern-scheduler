@@ -12,6 +12,27 @@ services:
   # Use docker for the databases, so that we can support Microsoft SQL Server in the tests.
   - docker
 
+env:
+  - SQLITE=y
+
+  # Docker-based database settings.
+  # These values are based on the docker-compose parameters.
+  - MYSQL_DB=tern
+  - MYSQL_USERNAME=tern-user
+  - MYSQL_PASSWORD=tern-pw
+  - MYSQL_PORT=19000
+
+  - POSTGRES_DB=tern
+  - POSTGRES_USERNAME=tern-user
+  - POSTGRES_PASSWORD=tern-pw
+  - POSTGRES_PORT=19001
+
+  - MSSQL_DB=master
+  - MSSQL_USERNAME=sa
+  - MSSQL_PASSWORD=tern-pw-1234
+  - MSSQL_PORT=19002
+
+
 #before_install:
 
 install:
@@ -25,5 +46,6 @@ jobs:
       name: "TypeScript Compile"
       script: "npm run build"
     - stage: "Test"
-      name: "Unit and Integration Tests"
+      name: "Unit Tests"
       script: "npm run test"
+
