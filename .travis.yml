@@ -43,10 +43,7 @@ install:
 
 jobs:
   include:
-    - stage: "Build"
+    - stage: "Build and Test"
       name: "TypeScript Compile"
-      script: "npm run build"
-    - stage: "Test"
-      name: "Unit Tests"
-      script: "npm run test"
+      script: "npm run build && npm run test"
 
