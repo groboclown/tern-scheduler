@@ -6,6 +6,6 @@ export { ScheduledJob } from './schedule.model'
 export { Task } from './task.model'
 
 
-export function getModels(): typeof Model[] {
+export function getModels(): Array<typeof Model> {
   return [ScheduledJob, Task]
 }

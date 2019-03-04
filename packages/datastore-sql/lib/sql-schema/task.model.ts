@@ -11,17 +11,17 @@ import {
 } from '@tern-scheduler/core/lib/model'
 import {
   TaskDataModel
-} from '@tern-scheduler/core/lib/datastore/db-api';
+} from '@tern-scheduler/core/lib/datastore/db-api'
 
 
 @Table({
-  tableName: 'TASK'
+  tableName: 'TERN_TASK',
 })
 export class Task extends Model<Task> implements TaskDataModel {
   @PrimaryKey
   @Column({
     type: DataType.STRING(64),
-    allowNull: false
+    allowNull: false,
   })
   pk!: string
 
@@ -30,61 +30,61 @@ export class Task extends Model<Task> implements TaskDataModel {
   // @ForeignKey(() => Schedule)
   @Column({
     type: DataType.STRING(64),
-    allowNull: false
+    allowNull: false,
   })
   schedule!: string
 
   @Column({
     type: DataType.STRING(64),
-    allowNull: false
+    allowNull: false,
   })
   state!: TaskStateType
 
   @Column({
     type: DataType.DATE,
-    allowNull: false
+    allowNull: false,
   })
   createdOn!: Date
 
   @Column({
     type: DataType.DATE,
-    allowNull: false
+    allowNull: false,
   })
   executeAt!: Date
 
   @Column({
-    type: DataType.DATE
+    type: DataType.DATE,
   })
   executionJobId!: string | null
 
   @Column({
-    type: DataType.DATE
+    type: DataType.DATE,
   })
   executionQueued!: Date | null
 
   @Column({
-    type: DataType.DATE
+    type: DataType.DATE,
   })
   executionStarted!: Date | null
 
   @Column({
-    type: DataType.DATE
+    type: DataType.DATE,
   })
   executionFinished!: Date | null
 
   @Column({
-    type: DataType.DATE
+    type: DataType.DATE,
   })
   nextTimeoutCheck!: Date | null
 
   @Column({
     type: DataType.INTEGER,
-    allowNull: false
+    allowNull: false,
   })
   retryIndex!: number
 
   @Column({
-    type: DataType.TEXT
+    type: DataType.TEXT,
   })
   completedInfo!: string | null
 

@@ -12,13 +12,15 @@ import {
 } from '@tern-scheduler/core'
 
 import { datastore } from '@tern-scheduler/core'
-import { Op } from 'sequelize';
+import { Op } from 'sequelize'
 
 const DatabaseDataStore = datastore.DatabaseDataStore
 
 
-export function createSqlDataStore(sequelize: Sequelize,
-  logger?: (sql: string, timeMillis?: number) => void): DataStore {
+export function createSqlDataStore(
+  sequelize: Sequelize,
+  logger?: (sql: string, timeMillis?: number) => void
+): DataStore {
   return new DatabaseDataStore(new SqlDatabase(sequelize, logger))
 }
 
@@ -93,7 +95,7 @@ class SequelizeTable<T extends ScheduledJob | Task> implements datastore.db.DbTa
         // Returns ScheduledJob type, but we expect to return ScheduledJobDataModel.
         // But we created ScheduledJob so that it implements ScheduledJobDataModel,
         // so we're fine.
-        .then(values => { resolve(<T[]>(<any[]>values)) })
+        .then((values) => { resolve((values as any[]) as T[]) })
         .catch(reject)
     )
   }
@@ -110,7 +112,7 @@ class SequelizeTable<T extends ScheduledJob | Task> implements datastore.db.DbTa
         logging: this.logger,
         benchmark: !!this.logger,
       })
-        .then(value => { resolve(value) })
+        .then((value) => { resolve(value) })
         .catch(reject)
     )
   }
@@ -204,20 +206,20 @@ function toWhereClause<T extends datastore.BaseModel>(primaryKey: string, condit
 function conditionalLink<T extends datastore.BaseModel>(cnd: datastore.db.Conditional<T>): any {
   if (datastore.db.isAndConditional(cnd)) {
     const ret: any[] = []
-    cnd.conditionals.forEach(c => { ret.push(conditionalLink(c)) })
+    cnd.conditionals.forEach((c) => { ret.push(conditionalLink(c)) })
     return { [Op.and]: ret }
   }
   if (datastore.db.isOrConditional(cnd)) {
     const ret: any[] = []
-    cnd.conditionals.forEach(c => { ret.push(conditionalLink(c)) })
+    cnd.conditionals.forEach((c) => { ret.push(conditionalLink(c)) })
     return { [Op.or]: ret }
   }
   if (datastore.db.isEqualsConditional(cnd)) {
     return { [cnd.key]: { [Op.eq]: cnd.value } }
   }
-  //if (datastore.db.isAfterDateConditional(cnd)) {
-  //  return { [cnd.key]: { [Op.ne]: null, [Op.gt]: cnd.after } }
-  //}
+  // if (datastore.db.isAfterDateConditional(cnd)) {
+  //   return { [cnd.key]: { [Op.ne]: null, [Op.gt]: cnd.after } }
+  // }
   if (datastore.db.isBeforeDateConditional(cnd)) {
     return { [cnd.key]: { [Op.ne]: null, [Op.lt]: cnd.before } }
   }
