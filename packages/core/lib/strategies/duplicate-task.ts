@@ -25,10 +25,10 @@ export interface DuplicateTaskStrategyRegistry extends StrategyRegistry<Duplicat
 export const ALWAYS_SKIP_DUPLICATE_TASK_NAME = 'always-skip'
 export const ALWAYS_RUN_DUPLICATE_TASK_NAME = 'always-run'
 
-export function registerAlwaysSkipDuplicateTaskStrategy(reg: DuplicateTaskStrategyRegistry) {
+export function registerAlwaysSkipDuplicateTaskStrategy(reg: DuplicateTaskStrategyRegistry): void {
   reg.register(ALWAYS_SKIP_DUPLICATE_TASK_NAME, () => DUPLICATE_TASK_SKIP_NEW)
 }
 
-export function registerAlwaysRunDuplicateTaskStrategy(reg: DuplicateTaskStrategyRegistry) {
+export function registerAlwaysRunDuplicateTaskStrategy(reg: DuplicateTaskStrategyRegistry): void {
   reg.register(ALWAYS_RUN_DUPLICATE_TASK_NAME, () => DUPLICATE_TASK_RUN_NEW)
 }

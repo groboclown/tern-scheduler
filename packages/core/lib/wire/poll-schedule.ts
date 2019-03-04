@@ -23,12 +23,12 @@ export function pollScheduledJobsForExpiredLeases(
 ): void {
   pollLoop(pollStrat, registerPoll, () => store
     .pollLeaseExpiredScheduledJobs(currentTimeUTC(), POLL_JOBS_LIMIT)
-    .then(jobs => {
-      jobs.forEach(job => {
+    .then((jobs) => {
+      jobs.forEach((job) => {
         messaging.emit('scheduledJobLeaseExpired', job)
       })
     })
-    .catch(e => {
+    .catch((e) => {
       messaging.emit('generalError', e)
       // Don't stop with this one error; keep running the poll
       return Promise.resolve()

@@ -4,12 +4,12 @@
   "description": "Task Scheduler Service for Node",
   "main": "index.js",
   "scripts": {
-    "build": "node_modules/.bin/tsc",
+    "build": "node_modules/.bin/tsc && npm run lint",
     "test-base": "node_modules/.bin/mocha",
     "test": "node_modules/.bin/nyc mocha",
     "report": "node_modules/.bin/nyc report",
     "#test:watch": "See https://github.com/mochajs/mocha/issues/3748 for bugs with the watch expression and ts-node",
-    "lint": "node_modules/.bin/tslint index.ts \"./lib/**/*.ts\""
+    "lint": "node_modules/.bin/tslint -e \"./lib/**/__mocha__/*.ts\" index.ts \"./lib/**/*.ts\""
   },
   "keywords": [
     "scheduler",

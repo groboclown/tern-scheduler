@@ -1,5 +1,5 @@
 
-import { BaseModel, PrimaryKeyType } from './base';
+import { BaseModel, PrimaryKeyType } from './base'
 
 export type SCHEDULE_STATE_ADD_TASK = 'add-task'
 export const SCHEDULE_STATE_ADD_TASK = 'add-task'

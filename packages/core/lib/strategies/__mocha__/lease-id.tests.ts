@@ -20,7 +20,7 @@ describe('lease-id', () => {
           const ret = registered[name]
           if (!ret) throw new Error(`bad`)
           return ret
-        }
+        },
       }
 
       it('with everything valid', () => {

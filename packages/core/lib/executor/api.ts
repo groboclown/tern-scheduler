@@ -7,6 +7,12 @@ import {
 
 
 export interface JobExecutionManager {
+
+  /**
+   * Tells the job execution framework to begin running a job.
+   */
+  startJob: StartJob
+
   /**
    * Connect the job execution framework to the event emitter for this node.
    * The events are limited within this emitter to sending completion notices,
@@ -15,9 +21,4 @@ export interface JobExecutionManager {
    * @param messaging
    */
   withMessaging(messaging: JobExecutionEventEmitter): this
-
-  /**
-   * Tells the job execution framework to begin running a job.
-   */
-  startJob: StartJob
 }

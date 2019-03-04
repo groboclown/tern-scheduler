@@ -17,7 +17,7 @@ function conditionalMatchesRecord<T extends model.BaseModel>(record: any, cnd: a
     return false
   }
   if (api.isAndConditional(cnd)) {
-    for (let c of cnd.conditionals) {
+    for (const c of cnd.conditionals) {
       const res = conditionalMatchesRecord(record, c)
       if (!res) {
         return false
@@ -26,7 +26,7 @@ function conditionalMatchesRecord<T extends model.BaseModel>(record: any, cnd: a
     return true
   }
   if (api.isOrConditional(cnd)) {
-    for (let c of cnd.conditionals) {
+    for (const c of cnd.conditionals) {
       const res = conditionalMatchesRecord(record, c)
       if (res) {
         return true
@@ -71,12 +71,12 @@ class MemTable<T extends api.DataModel> implements api.DbTableController<T> {
     newValues: Partial<T>,
     conditional?: api.Conditional<T>
   ): Promise<number> {
-    const nv = <any>newValues
+    const nv = newValues as any
     const matches = this._matches(primaryKey, conditional)
-    matches.forEach(row => {
+    matches.forEach((row) => {
       // Ignore the read-only aspects, and any model restrictions...
-      const r = <any>row
-      Object.keys(newValues).forEach(key => {
+      const r = row as any
+      Object.keys(newValues).forEach((key) => {
         if (key !== 'pk') {
           r[key] = nv[key]
         }
@@ -119,9 +119,9 @@ class MemTable<T extends api.DataModel> implements api.DbTableController<T> {
   }
 
   private _matches(primaryKey: model.PrimaryKeyType | null, conditional?: api.Conditional<T>): T[] {
-    return this.rows.filter(
-      v => (!primaryKey || v.pk === primaryKey)
-        && (!conditional || matchesRecord(v, conditional))
+    return this.rows.filter((v) =>
+      (!primaryKey || v.pk === primaryKey)
+      && (!conditional || matchesRecord(v, conditional))
     )
   }
 
@@ -132,7 +132,7 @@ class MemTable<T extends api.DataModel> implements api.DbTableController<T> {
     }
     this.pks[pk] = true
     this.rows.push({
-      ...row
+      ...row,
     })
     return true
   }

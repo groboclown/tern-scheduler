@@ -136,7 +136,7 @@ export function startTask(
           // THe only external system we're allowed to call while we have a
           // scheduled job lease.
           startJob(task.pk, sched.jobName, sched.jobContext)
-            .catch(e =>
+            .catch((e) =>
               // request to start the job failed.  This is different than the
               // job just failing; this means the job framework just couldn't
               // perform its actions.
@@ -150,7 +150,7 @@ export function startTask(
             .markTaskStarted(task, currentTimeUTC(), execId)
             .then(() => execId)
         )
-        .then(execId => {
+        .then((execId) => {
           messaging.emit('taskRunning', task, execId)
         })
         .then(() => {
@@ -161,7 +161,7 @@ export function startTask(
             if (isTaskCreationDisable(taskRunDate)) {
               return Promise.resolve({ value: null, pasture: true })
             }
-            const task: TaskModel = {
+            const newTask: TaskModel = {
               pk: createPrimaryKeyStrat(),
               schedule: sched.pk,
               createdOn: now,
@@ -175,9 +175,9 @@ export function startTask(
               executionFinished: null,
               nextTimeoutCheck: null,
             }
-            return store.addTask(task)
+            return store.addTask(newTask)
               .then(() => {
-                messaging.emit('taskCreated', task)
+                messaging.emit('taskCreated', newTask)
                 return { value: null }
               })
           }
@@ -217,106 +217,107 @@ export function taskFinished(
   }
   return store
     .getTaskByExecutionJobId(execJobId)
-    .then(task => {
+    .then((task) => {
       if (!task) {
         throw new TaskNotFoundError(execJobId)
       }
-      return runUpdateInLease(store, SCHEDULE_STATE_END_TASK, task.schedule, task.pk, now, lease, messaging, (sched): Promise<LeaseExitStateValue<null>> => {
-        if (isJobExecutionStateFailed(result)) {
-          return store
-            .markTaskFailed(task, now, TASK_STATE_STARTED, TASK_STATE_COMPLETE_ERROR, result.result)
-            .then((): Promise<LeaseExitStateValue<null>> => {
-              // Handle retry
-              const retryInSeconds = retryReg.get(sched.retryStrategy)(sched, task, result.result)
-              if (retryInSeconds === null) {
-                // No retry.  May need to queue up another task.
-                const taskCreationStrategy = taskCreationReg.get(sched.taskCreationStrategy)
-                if (isTaskCreationStrategyAfterFinish(taskCreationStrategy)) {
-                  const taskRunDate = taskCreationStrategy.createAfterTaskFinishes(now, sched)
-                  if (isTaskCreationDisable(taskRunDate)) {
-                    return Promise.resolve(<LeaseExitStateValue<null>>{ value: null, pasture: true })
-                  }
-                  const newTask: TaskModel = {
-                    pk: createPrimaryKeyStrat(),
-                    schedule: sched.pk,
-                    createdOn: now,
-                    state: TASK_STATE_PENDING,
-                    executeAt: taskRunDate.runAt,
-                    executionJobId: null,
-                    retryIndex: 0,
-                    completedInfo: null,
-                    executionQueued: null,
-                    executionStarted: null,
-                    executionFinished: null,
-                    nextTimeoutCheck: null,
-                  }
-                  return store.addTask(newTask)
-                    .then(() => {
-                      // A new task was created, and the old task completed.
-                      messaging.emit('taskCreated', newTask)
-                      messaging.emit('taskFinished', task)
-                      return { value: null }
-                    })
-                }
-                // Nothing to run after task finished, but the task did finish.
-                messaging.emit('taskFinished', task)
-                return Promise.resolve({ value: null })
-              }
-              // Queue a retry task
-              // Retry time is based on when the task was discovered to be failed,
-              // which is the "now" time.
-              const retryTime = new Date(now.valueOf())
-              retryTime.setSeconds(retryTime.getSeconds() + retryInSeconds)
-              // Check if there's another task already in queued or running state
-              // for this schedule.  If so, run duplicate strategy logic.
-              return store
-                .getActiveTasksForScheduledJob(sched, DUPLICATE_RUNNING_TASK_LIMIT)
-                .then(activeTasks => {
-                  if (activeTasks.length > 0) {
-                    const strat = duplicateTaskReg.get(sched.duplicateStrategy)(sched, activeTasks, task)
-                    if (strat === DUPLICATE_TASK_SKIP_NEW) {
-                      logInfo('taskFinished', `Skipping creating new task on retry for schedule ${sched.pk}`)
-                      // In this case, retry is not triggered.  So, we complete the task.
-                      messaging.emit('taskFinished', task)
-                      return Promise.resolve({ value: null })
+      return runUpdateInLease(store, SCHEDULE_STATE_END_TASK, task.schedule, task.pk, now, lease, messaging,
+        (sched): Promise<LeaseExitStateValue<null>> => {
+          if (isJobExecutionStateFailed(result)) {
+            return store
+              .markTaskFailed(task, now, TASK_STATE_STARTED, TASK_STATE_COMPLETE_ERROR, result.result)
+              .then((): Promise<LeaseExitStateValue<null>> => {
+                // Handle retry
+                const retryInSeconds = retryReg.get(sched.retryStrategy)(sched, task, result.result)
+                if (retryInSeconds === null) {
+                  // No retry.  May need to queue up another task.
+                  const taskCreationStrategy = taskCreationReg.get(sched.taskCreationStrategy)
+                  if (isTaskCreationStrategyAfterFinish(taskCreationStrategy)) {
+                    const taskRunDate = taskCreationStrategy.createAfterTaskFinishes(now, sched)
+                    if (isTaskCreationDisable(taskRunDate)) {
+                      return Promise.resolve({ value: null, pasture: true })
                     }
-                    // else the duplicate running tasks don't inhibit retrying.
+                    const newTask: TaskModel = {
+                      pk: createPrimaryKeyStrat(),
+                      schedule: sched.pk,
+                      createdOn: now,
+                      state: TASK_STATE_PENDING,
+                      executeAt: taskRunDate.runAt,
+                      executionJobId: null,
+                      retryIndex: 0,
+                      completedInfo: null,
+                      executionQueued: null,
+                      executionStarted: null,
+                      executionFinished: null,
+                      nextTimeoutCheck: null,
+                    }
+                    return store.addTask(newTask)
+                      .then(() => {
+                        // A new task was created, and the old task completed.
+                        messaging.emit('taskCreated', newTask)
+                        messaging.emit('taskFinished', task)
+                        return { value: null }
+                      })
                   }
-                  // else, no active tasks, so no conflict.
-                  const newTask: TaskModel = {
-                    pk: createPrimaryKeyStrat(),
-                    schedule: sched.pk,
-                    createdOn: now,
-                    state: TASK_STATE_PENDING,
-                    executeAt: retryTime,
-                    executionJobId: null,
-                    retryIndex: 0,
-                    completedInfo: null,
-                    executionQueued: null,
-                    executionStarted: null,
-                    executionFinished: null,
-                    nextTimeoutCheck: null,
-                  }
-                  return store.addTask(newTask)
-                    .then(() => {
-                      // A new task was created, and the old task completed.
-                      messaging.emit('taskCreated', newTask)
-                      messaging.emit('taskFinished', task)
-                      return { value: null }
-                    })
-                })
-            })
-        } else if (isJobExecutionStateCompleted(result)) {
-          return store
-            .markTaskCompleted(task, now, result.result)
-            .then(() => {
-              messaging.emit('taskFinished', task)
-              return { value: null }
-            })
-        } else {
-          return Promise.reject(new TernError(`invalid job execution state ${JSON.stringify(result)}`))
-        }
-      })
+                  // Nothing to run after task finished, but the task did finish.
+                  messaging.emit('taskFinished', task)
+                  return Promise.resolve({ value: null })
+                }
+                // Queue a retry task
+                // Retry time is based on when the task was discovered to be failed,
+                // which is the "now" time.
+                const retryTime = new Date(now.valueOf())
+                retryTime.setSeconds(retryTime.getSeconds() + retryInSeconds)
+                // Check if there's another task already in queued or running state
+                // for this schedule.  If so, run duplicate strategy logic.
+                return store
+                  .getActiveTasksForScheduledJob(sched, DUPLICATE_RUNNING_TASK_LIMIT)
+                  .then((activeTasks) => {
+                    if (activeTasks.length > 0) {
+                      const strat = duplicateTaskReg.get(sched.duplicateStrategy)(sched, activeTasks, task)
+                      if (strat === DUPLICATE_TASK_SKIP_NEW) {
+                        logInfo('taskFinished', `Skipping creating new task on retry for schedule ${sched.pk}`)
+                        // In this case, retry is not triggered.  So, we complete the task.
+                        messaging.emit('taskFinished', task)
+                        return Promise.resolve({ value: null })
+                      }
+                      // else the duplicate running tasks don't inhibit retrying.
+                    }
+                    // else, no active tasks, so no conflict.
+                    const newTask: TaskModel = {
+                      pk: createPrimaryKeyStrat(),
+                      schedule: sched.pk,
+                      createdOn: now,
+                      state: TASK_STATE_PENDING,
+                      executeAt: retryTime,
+                      executionJobId: null,
+                      retryIndex: 0,
+                      completedInfo: null,
+                      executionQueued: null,
+                      executionStarted: null,
+                      executionFinished: null,
+                      nextTimeoutCheck: null,
+                    }
+                    return store.addTask(newTask)
+                      .then(() => {
+                        // A new task was created, and the old task completed.
+                        messaging.emit('taskCreated', newTask)
+                        messaging.emit('taskFinished', task)
+                        return { value: null }
+                      })
+                  })
+              })
+          } else if (isJobExecutionStateCompleted(result)) {
+            return store
+              .markTaskCompleted(task, now, result.result)
+              .then(() => {
+                messaging.emit('taskFinished', task)
+                return { value: null }
+              })
+          } else {
+            return Promise.reject(new TernError(`invalid job execution state ${JSON.stringify(result)}`))
+          }
+        })
     })
     // make sure we return void
     .then(() => { })

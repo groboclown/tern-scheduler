@@ -9,7 +9,9 @@ import {
 
 
 /** Marker for the data-storage version of the values. */
+/* tslint:disable:no-empty-interface */
 export interface DataModel extends BaseModel { }
+/* tslint:enable:no-empty-interface */
 
 export interface ScheduledJobDataModel extends ScheduledJobModel, DataModel {
   /**
@@ -48,7 +50,9 @@ export class EqualsConditional<T extends DataModel, K extends keyof T> implement
   ) { }
 }
 
-export function isEqualsConditional<T extends DataModel, K extends keyof T>(v: Conditional<T> | undefined | null): v is EqualsConditional<T, K> {
+export function isEqualsConditional<T extends DataModel, K extends keyof T>(
+  v: Conditional<T> | undefined | null
+): v is EqualsConditional<T, K> {
   return (!!v) && v.type === 'eq'
 }
 
@@ -71,11 +75,13 @@ export class OneOfConditional<T extends DataModel, K extends keyof T> implements
   readonly type = 'in'
   constructor(
     public readonly key: K,
-    public readonly values: (T[K])[]
+    public readonly values: Array<T[K]>
   ) { }
 }
 
-export function isOneOfConditional<T extends DataModel, K extends keyof T>(v: Conditional<T> | undefined | null): v is OneOfConditional<T, K> {
+export function isOneOfConditional<T extends DataModel, K extends keyof T>(
+  v: Conditional<T> | undefined | null
+): v is OneOfConditional<T, K> {
   return (!!v) && v.type === 'in'
 }
 
@@ -105,7 +111,7 @@ export function isNotNullConditional<T extends DataModel>(v: Conditional<T> | un
 export class OrConditional<T extends DataModel> implements Conditional<T> {
   readonly type = 'or'
   constructor(
-    public readonly conditionals: Conditional<T>[],
+    public readonly conditionals: Array<Conditional<T>>
   ) { }
 }
 
@@ -116,7 +122,7 @@ export function isOrConditional<T extends DataModel>(v: Conditional<T> | undefin
 export class AndConditional<T extends DataModel> implements Conditional<T> {
   readonly type = 'and'
   constructor(
-    public readonly conditionals: Conditional<T>[]
+    public readonly conditionals: Array<Conditional<T>>
   ) { }
 }
 
@@ -155,8 +161,8 @@ export interface DbTableController<T extends DataModel> {
 
 
 export interface Database {
-  updateSchema(): Promise<void>
-
   readonly scheduledJobTable: DbTableController<ScheduledJobDataModel>
   readonly taskTable: DbTableController<TaskDataModel>
+
+  updateSchema(): Promise<void>
 }

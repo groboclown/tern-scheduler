@@ -11,5 +11,5 @@ export function currentTimeUTC(): Date {
 export const CurrentTime = {
   get: (): Date => {
     return new Date()
-  }
+  },
 }

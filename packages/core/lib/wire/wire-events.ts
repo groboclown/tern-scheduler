@@ -45,11 +45,11 @@ export function wireDataStore(
 ): void {
   jobExecutor.withMessaging(messaging)
   messaging
-    .on('generalError', e => {
+    .on('generalError', (e) => {
       // Standard log handling.  End users can monitor this in their own way.
       logCriticalError(e)
     })
-    .on('scheduledJobLeaseExpired', schedule => {
+    .on('scheduledJobLeaseExpired', (schedule) => {
       // FIXME need to handle fixing expired job leases.
       // FIXME need to handle fixing expired job leases.
       // FIXME need to handle fixing expired job leases.
@@ -66,18 +66,18 @@ export function wireDataStore(
       // FIXME need to handle fixing expired job leases.
       logNotificationError(`scheduled job expired: ${schedule.pk}`, null)
     })
-    .on('taskReadyToExecute', task => {
+    .on('taskReadyToExecute', (task) => {
       const now = currentTimeUTC()
       startTask(
         store, task, leaseBehavior, now,
         jobExecutor.startJob, taskCreationReg, currentTimeUTC,
         createPrimaryKeyStrat, messaging
       )
-        .catch(e => {
+        .catch((e) => {
           messaging.emit('generalError', e)
         })
     })
-    .on('taskExecutingLong', task => {
+    .on('taskExecutingLong', (task) => {
       // FIXME inspect the task for repair
       // FIXME inspect the task for repair
       // FIXME inspect the task for repair
@@ -92,7 +92,7 @@ export function wireDataStore(
       // FIXME inspect the task for repair
       logNotificationError(`task execution took too long: ${task.pk}`, null)
     })
-    .on('taskQueuedLong', task => {
+    .on('taskQueuedLong', (task) => {
       // FIXME inspect the task for repair
       // FIXME inspect the task for repair
       // FIXME inspect the task for repair
@@ -114,7 +114,7 @@ export function wireDataStore(
       taskFinished(
         store, execId, result, now, leaseBehavior, createPrimaryKeyStrat, retryReg, taskCreationReg, duplicateReg, messaging
       )
-        .catch(e => {
+        .catch((e) => {
           messaging.emit('generalError', e)
         })
     })

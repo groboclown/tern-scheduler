@@ -23,6 +23,6 @@ export const StandardTime: CurrentTimeUTCStrategy = currentTimeUTC
 
 export const STANDARD_TIME_STRATEGY = 'standard'
 
-export function registerStandardTimeStrategy(reg: CurrentTimeUTCStrategyRegistry) {
+export function registerStandardTimeStrategy(reg: CurrentTimeUTCStrategyRegistry): void {
   reg.register(STANDARD_TIME_STRATEGY, StandardTime)
 }

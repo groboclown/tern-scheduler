@@ -9,7 +9,8 @@ import {
 } from '../model'
 
 export class LeaseError extends TernError {
-  constructor(readonly ourLeaseId: LeaseIdType, readonly job: ScheduledJobModel,
+  constructor(
+    readonly ourLeaseId: LeaseIdType, readonly job: ScheduledJobModel,
     readonly leaseOwner: LeaseIdType | null, readonly leaseExpires: Date | null, message: string
   ) {
     super(`${message}; currently owned by ${leaseOwner} expires ${leaseExpires}`)
@@ -42,7 +43,8 @@ export class LeaseNotOwnedError extends LeaseError {
 
 export class LeaseExpiredError extends LeaseError {
   constructor(ourLeaseId: LeaseIdType, job: ScheduledJobModel, leaseOwner: LeaseIdType | null, leaseExpires: Date | null) {
-    super(ourLeaseId, job, leaseOwner, leaseExpires, `Could not release lease for ${ourLeaseId} against job ${job.pk} due to another operation stole the lease because it was expired`)
+    super(ourLeaseId, job, leaseOwner, leaseExpires,
+      `Could not release lease for ${ourLeaseId} against job ${job.pk} due to another operation stole the lease because it was expired`)
 
     // Error workaround fun
     this.name = LeaseExpiredError.name

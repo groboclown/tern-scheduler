@@ -111,8 +111,8 @@ export interface DataStore {
    * tasks?
    *
    * @param job
-  deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean>
    */
+  // deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean>
 
   /**
    * Create a lease on the scheduled job.  This must obtain the lease if and only if
@@ -165,8 +165,10 @@ export interface DataStore {
    * @param now
    * @param leaseTimeSeconds
    */
-  repairExpiredLeaseForScheduledJob(jobPk: PrimaryKeyType, newLeaseId: LeaseIdType,
-    now: Date, leaseTimeSeconds: number): Promise<void>
+  repairExpiredLeaseForScheduledJob(
+    jobPk: PrimaryKeyType, newLeaseId: LeaseIdType,
+    now: Date, leaseTimeSeconds: number
+  ): Promise<void>
 
   /**
    * Mark the currently leased scheduled job as needing repair.  It does this by
@@ -362,10 +364,12 @@ export interface DataStore {
    * @param now the date for right now; must be in UTC time zone; some data stores may instead
    *  ignore this value.
    */
-  markTaskFailed(task: TaskModel, now: Date, expectedCurrentState: TaskStateType,
+  markTaskFailed(
+    task: TaskModel, now: Date, expectedCurrentState: TaskStateType,
     failedState: TASK_STATE_COMPLETE_ERROR | TASK_STATE_COMPLETE_QUEUED |
       TASK_STATE_FAILED | TASK_STATE_FAIL_RESTARTED,
-    info: string): Promise<void>
+    info: string
+  ): Promise<void>
 
   /**
    * Attempts to delete the task marked as one of the finished states.

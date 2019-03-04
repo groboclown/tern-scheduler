@@ -28,17 +28,17 @@ import {
   TASK_STATE_FAIL_RESTARTED,
   TASK_STATE_START_ERROR,
   TASK_STATE_COMPLETED,
-  TASK_STATE_COMPLETE_QUEUED
+  TASK_STATE_COMPLETE_QUEUED,
 } from '../model/task'
 import {
   LeaseNotObtainedError,
   ScheduledJobNotFoundError,
   LeaseNotOwnedError,
   InvalidTaskStateError,
-  DuplicatePrimaryKeyError
+  DuplicatePrimaryKeyError,
 } from '../errors'
-import { TaskNotFoundError } from '../errors/controller-errors';
-import { ExecutionJobId } from '../executor/types';
+import { TaskNotFoundError } from '../errors/controller-errors'
+import { ExecutionJobId } from '../executor/types'
 
 
 // Column names
@@ -73,7 +73,7 @@ export class DatabaseDataStore implements DataStore {
   getScheduledJob(pk: PrimaryKeyType): Promise<ScheduledJobModel | null> {
     return this.db.scheduledJobTable
       .find(0, 1, pkEquals(pk))
-      .then(rows => {
+      .then((rows) => {
         if (rows.length > 0) {
           return rows[0]
         }
@@ -93,7 +93,7 @@ export class DatabaseDataStore implements DataStore {
       // Stored as a ScheduledJobDataModel, but that is a subclass, so it will conform.
       .find(startIndex, limit + 1,
         sjEquals(SJ_PASTURE, false))
-      .then(rows =>
+      .then((rows) =>
         pageResults(rows, startIndex, limit))
   }
 
@@ -103,21 +103,21 @@ export class DatabaseDataStore implements DataStore {
       // Stored as a ScheduledJobDataModel, but that's a subclass, so it will conform.
       .find(startIndex, limit + 1,
         sjEquals(SJ_PASTURE, true))
-      .then(rows =>
+      .then((rows) =>
         pageResults(rows, startIndex, limit))
   }
 
   disableScheduledJob(job: ScheduledJobModel, leaseId: LeaseIdType): Promise<boolean> {
     return this.db.scheduledJobTable
       .conditionalUpdate(job.pk, {
-        pasture: true
+        pasture: true,
       }, sjOr([
         // Note: this operation could run without a lease, by checking that the state is null.
         sjEquals(SJ_UPDATE_STATE, SCHEDULE_STATE_PASTURE),
         sjEquals(SJ_LEASE_OWNER, leaseId),
-        sjEquals(SJ_PASTURE, false)
+        sjEquals(SJ_PASTURE, false),
       ]))
-      .then(updateCount => {
+      .then((updateCount) => {
         if (updateCount > 0) {
           return Promise.resolve(true)
         }
@@ -127,7 +127,7 @@ export class DatabaseDataStore implements DataStore {
         return this.db.scheduledJobTable
           .find(0, 1,
             sjEquals(MODEL_PRIMARY_KEY, job.pk))
-          .then(jobs => {
+          .then((jobs) => {
             if (jobs.length > 0) {
               if (jobs[0].pasture) {
                 return Promise.resolve(false)
@@ -148,7 +148,7 @@ export class DatabaseDataStore implements DataStore {
     return this.db.scheduledJobTable
       .remove(job.pk, sjEquals(SJ_PASTURE, true))
       // Note - no query needed for failure situation.  Either it was not disabled or already deleted.
-      .then(count => count > 0)
+      .then((count) => count > 0)
   }
 
 
@@ -167,7 +167,7 @@ export class DatabaseDataStore implements DataStore {
         sjNotNull(SJ_UPDATE_STATE),
         sjBeforeDate(SJ_LEASE_EXPIRES, now),
       ]))
-      .then(count => {
+      .then((count) => {
         if (count > 0) {
           return Promise.resolve()
         }
@@ -176,7 +176,7 @@ export class DatabaseDataStore implements DataStore {
         return this.db.scheduledJobTable
           .find(0, 1,
             pkEquals(jobPk))
-          .then(jobs => {
+          .then((jobs) => {
             if (jobs.length > 0) {
               return Promise.reject(new LeaseNotObtainedError(newLeaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
             } else {
@@ -197,7 +197,7 @@ export class DatabaseDataStore implements DataStore {
     return this.db.scheduledJobTable
       .conditionalUpdate(jobPk, {
         updateState: updateOperation,
-        updateTaskPk: updateTaskPk,
+        updateTaskPk,
         leaseOwner: leaseId,
         leaseExpires: expires,
       },
@@ -206,7 +206,7 @@ export class DatabaseDataStore implements DataStore {
         // the job is disabled.
         sjNull(SJ_UPDATE_STATE)
       )
-      .then(count => {
+      .then((count) => {
         if (count > 0) {
           return Promise.resolve()
         }
@@ -215,7 +215,7 @@ export class DatabaseDataStore implements DataStore {
         return this.db.scheduledJobTable
           .find(0, 1,
             pkEquals(jobPk))
-          .then(jobs => {
+          .then((jobs) => {
             if (jobs.length > 0) {
               return Promise.reject(new LeaseNotObtainedError(leaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
             } else {
@@ -230,7 +230,7 @@ export class DatabaseDataStore implements DataStore {
     jobPk: PrimaryKeyType,
     pasture?: boolean
   ): Promise<void> {
-    let updates: Partial<database.ScheduledJobDataModel>;
+    let updates: Partial<database.ScheduledJobDataModel>
     // Passing "undefined" in the partial value means that the key is still
     // in the object.
     if (pasture !== undefined) {
@@ -256,9 +256,9 @@ export class DatabaseDataStore implements DataStore {
           // No need for checking if the state is pastured or not.
           // It could be leased while pastured.
           sjNotNull(SJ_UPDATE_STATE),
-          sjEquals(SJ_LEASE_OWNER, leaseId)
+          sjEquals(SJ_LEASE_OWNER, leaseId),
         ]))
-      .then(count => {
+      .then((count) => {
         if (count > 0) {
           return Promise.resolve()
         }
@@ -267,7 +267,7 @@ export class DatabaseDataStore implements DataStore {
         return this.db.scheduledJobTable
           .find(0, 1,
             pkEquals(jobPk))
-          .then(jobs => {
+          .then((jobs) => {
             if (jobs.length > 0) {
               return Promise.reject(new LeaseNotOwnedError(leaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
             } else {
@@ -290,12 +290,12 @@ export class DatabaseDataStore implements DataStore {
         // Set the lease owner to something that couldn't be leased
         leaseOwner: newLeaseId,
         // It expired in the past.
-        leaseExpires: expires
+        leaseExpires: expires,
       }, sjAnd([
         sjNotNull(SJ_UPDATE_STATE),
-        sjBeforeDate(SJ_LEASE_EXPIRES, now)
+        sjBeforeDate(SJ_LEASE_EXPIRES, now),
       ]))
-      .then(count => {
+      .then((count) => {
         if (count > 0) {
           return Promise.resolve()
         }
@@ -304,7 +304,7 @@ export class DatabaseDataStore implements DataStore {
         return this.db.scheduledJobTable
           .find(0, 1,
             pkEquals(jobPk))
-          .then(jobs => {
+          .then((jobs) => {
             if (jobs.length > 0) {
               return Promise.reject(new LeaseNotObtainedError(newLeaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
             } else {
@@ -318,12 +318,12 @@ export class DatabaseDataStore implements DataStore {
   markLeasedScheduledJobNeedsRepair(jobPk: PrimaryKeyType, leaseId: LeaseIdType, now: Date): Promise<void> {
     return this.db.scheduledJobTable
       .conditionalUpdate(jobPk, {
-        leaseExpires: now
+        leaseExpires: now,
       }, sjAnd([
         sjNotNull(SJ_UPDATE_STATE),
-        sjEquals(SJ_LEASE_OWNER, leaseId)
+        sjEquals(SJ_LEASE_OWNER, leaseId),
       ]))
-      .then(count => {
+      .then((count) => {
         if (count > 0) {
           return Promise.resolve()
         }
@@ -332,7 +332,7 @@ export class DatabaseDataStore implements DataStore {
         return this.db.scheduledJobTable
           .find(0, 1,
             pkEquals(jobPk))
-          .then(jobs => {
+          .then((jobs) => {
             if (jobs.length > 0) {
               return Promise.reject(new LeaseNotOwnedError('<unknown>', jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
             } else {
@@ -377,7 +377,7 @@ export class DatabaseDataStore implements DataStore {
     return this.db.taskTable
       .find(startIndex, limit + 1,
         tkEquals(TK_STATE, TASK_STATE_STARTED))
-      .then(rows => pageResults(rows, startIndex, limit))
+      .then((rows) => pageResults(rows, startIndex, limit))
   }
 
   getPendingTasks(pageKey: string | null, limit: number): Promise<Page<TaskModel>> {
@@ -385,7 +385,7 @@ export class DatabaseDataStore implements DataStore {
     return this.db.taskTable
       .find(startIndex, limit + 1,
         tkEquals(TK_STATE, TASK_STATE_PENDING))
-      .then(rows => pageResults(rows, startIndex, limit))
+      .then((rows) => pageResults(rows, startIndex, limit))
   }
 
   getFailedTasks(pageKey: string | null, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
@@ -398,7 +398,7 @@ export class DatabaseDataStore implements DataStore {
           TASK_STATE_FAIL_RESTARTED,
           TASK_STATE_START_ERROR,
         ]))
-      .then(rows => pageResults(rows, startIndex, limit))
+      .then((rows) => pageResults(rows, startIndex, limit))
   }
 
   getCompletedTasks(pageKey: string | null, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
@@ -406,7 +406,7 @@ export class DatabaseDataStore implements DataStore {
     return this.db.taskTable
       .find(startIndex, limit + 1,
         tkEquals(TK_STATE, TASK_STATE_COMPLETED))
-      .then(rows => pageResults(rows, startIndex, limit))
+      .then((rows) => pageResults(rows, startIndex, limit))
   }
 
   getFinishedTasks(pageKey: string | null, limit: number, since?: Date | undefined): Promise<Page<TaskModel>> {
@@ -420,12 +420,12 @@ export class DatabaseDataStore implements DataStore {
           TASK_STATE_START_ERROR,
           TASK_STATE_COMPLETED,
         ]))
-      .then(rows => pageResults(rows, startIndex, limit))
+      .then((rows) => pageResults(rows, startIndex, limit))
   }
 
   addTask(task: TaskModel): Promise<void> {
     const data: database.TaskDataModel = {
-      ...task
+      ...task,
     }
     return this.db.taskTable
       .create(data)
@@ -435,14 +435,14 @@ export class DatabaseDataStore implements DataStore {
     return this.db.taskTable
       .find(0, 1,
         pkEquals(pk))
-      .then(rows => rows.length > 0 ? rows[0] : null)
+      .then((rows) => rows.length > 0 ? rows[0] : null)
   }
 
   getTaskByExecutionJobId(execJobId: ExecutionJobId): Promise<TaskModel | null> {
     return this.db.taskTable
       .find(0, 2,
         tkEquals(TK_EX_JOB_ID, execJobId))
-      .then(rows => {
+      .then((rows) => {
         if (rows.length <= 0) {
           return null
         }
@@ -461,7 +461,7 @@ export class DatabaseDataStore implements DataStore {
           TASK_STATE_PENDING,
           TASK_STATE_QUEUED,
           TASK_STATE_STARTED,
-        ])
+        ]),
       ]))
   }
 
@@ -475,7 +475,7 @@ export class DatabaseDataStore implements DataStore {
     return this
       .markTaskState(task.pk, TASK_STATE_QUEUED, TASK_STATE_STARTED, {
         executionStarted: now,
-        executionJobId: executionId
+        executionJobId: executionId,
       })
   }
 
@@ -494,45 +494,16 @@ export class DatabaseDataStore implements DataStore {
 
   }
 
-  markTaskFailed(task: TaskModel, now: Date, expectedCurrentState: TaskStateType,
+  markTaskFailed(
+    task: TaskModel, now: Date, expectedCurrentState: TaskStateType,
     failedState: TASK_STATE_COMPLETE_ERROR | TASK_STATE_COMPLETE_QUEUED |
       TASK_STATE_FAILED | TASK_STATE_FAIL_RESTARTED,
     info: string
   ): Promise<void> {
     return this.markTaskState(task.pk, expectedCurrentState, failedState, {
       executionFinished: now,
-      completedInfo: info
+      completedInfo: info,
     })
-  }
-
-  private markTaskState(pk: PrimaryKeyType,
-    expectedCurrentState: TaskStateType, newState: TaskStateType, extra?: Partial<database.TaskDataModel>
-  ): Promise<void> {
-    const extraData = extra || {}
-    return this.db.taskTable
-      .conditionalUpdate(pk, {
-        ...extraData,
-        state: newState,
-      }, tkAnd([
-        tkEquals(TK_STATE, expectedCurrentState)
-      ]))
-      .then(count => {
-        if (count > 0) {
-          return Promise.resolve()
-        }
-        // Failure triggers can cause the query to not look right if someone steals
-        // the state between the initial conditional update and this query.
-        return this.db.taskTable
-          .find(0, 1,
-            pkEquals(pk))
-          .then(tasks => {
-            if (tasks.length > 0) {
-              return Promise.reject(new InvalidTaskStateError(tasks[0], newState, expectedCurrentState))
-            } else {
-              return Promise.reject(new TaskNotFoundError(pk))
-            }
-          })
-      })
   }
 
   deleteFinishedTask(task: TaskModel): Promise<boolean> {
@@ -545,8 +516,40 @@ export class DatabaseDataStore implements DataStore {
           TASK_STATE_START_ERROR,
           TASK_STATE_COMPLETED,
         ]))
-      .then(count => count > 0)
+      .then((count) => count > 0)
   }
+
+  private markTaskState(
+    pk: PrimaryKeyType,
+    expectedCurrentState: TaskStateType, newState: TaskStateType, extra?: Partial<database.TaskDataModel>
+  ): Promise<void> {
+    const extraData = extra || {}
+    return this.db.taskTable
+      .conditionalUpdate(pk, {
+        ...extraData,
+        state: newState,
+      }, tkAnd([
+        tkEquals(TK_STATE, expectedCurrentState),
+      ]))
+      .then((count) => {
+        if (count > 0) {
+          return Promise.resolve()
+        }
+        // Failure triggers can cause the query to not look right if someone steals
+        // the state between the initial conditional update and this query.
+        return this.db.taskTable
+          .find(0, 1,
+            pkEquals(pk))
+          .then((tasks) => {
+            if (tasks.length > 0) {
+              return Promise.reject(new InvalidTaskStateError(tasks[0], newState, expectedCurrentState))
+            } else {
+              return Promise.reject(new TaskNotFoundError(pk))
+            }
+          })
+      })
+  }
+
 }
 
 
@@ -560,7 +563,9 @@ function updateDate(date: Date, increaseSeconds: number): Date {
 
 function parsePageKey(pageKey: string | null): number {
   const startIndexMaybe = Number(pageKey || '0')
+  /* tslint:disable:use-isnan*/
   return startIndexMaybe === NaN ? 0 : startIndexMaybe
+  /* tslint:enable:use-isnan*/
 }
 
 function pageResults<T extends BaseModel>(rows: T[], startIndex: number, limit: number): Page<T> {
@@ -586,13 +591,13 @@ function pkEquals(pk: PrimaryKeyType): database.EqualsConditional<database.DataM
 }
 
 function sjAnd(
-  conditionals: database.Conditional<database.ScheduledJobDataModel>[]
+  conditionals: Array<database.Conditional<database.ScheduledJobDataModel>>
 ): database.AndConditional<database.ScheduledJobDataModel> {
   return new database.AndConditional<database.ScheduledJobDataModel>(conditionals)
 }
 
 function sjOr(
-  conditionals: database.Conditional<database.ScheduledJobDataModel>[]
+  conditionals: Array<database.Conditional<database.ScheduledJobDataModel>>
 ): database.OrConditional<database.ScheduledJobDataModel> {
   return new database.OrConditional<database.ScheduledJobDataModel>(conditionals)
 }
@@ -625,7 +630,7 @@ function sjNull(
 
 
 function tkAnd(
-  conditionals: database.Conditional<database.TaskDataModel>[]
+  conditionals: Array<database.Conditional<database.TaskDataModel>>
 ): database.AndConditional<database.TaskDataModel> {
   return new database.AndConditional<database.TaskDataModel>(conditionals)
 }
@@ -646,7 +651,7 @@ function tkBeforeDate(
 
 function tkOneOf<K extends keyof database.TaskDataModel>(
   key: K,
-  values: (database.TaskDataModel[K])[]
+  values: Array<database.TaskDataModel[K]>
 ): database.OneOfConditional<database.TaskDataModel, K> {
   return new database.OneOfConditional<database.TaskDataModel, K>(key, values)
 }

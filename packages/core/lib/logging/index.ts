@@ -1,6 +1,9 @@
 
-export var DEBUG = false
-export var INFO = true
+export let DEBUG = false
+export let INFO = true
+
+// This file is allowed to have console logging, because that's the point of it.
+/* tslint:disable:no-console */
 
 export function logCriticalError(e: any): void {
   console.error('ERROR:', e)

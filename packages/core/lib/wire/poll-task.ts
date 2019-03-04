@@ -22,12 +22,12 @@ export function pollTaskReadyToExecute(
 ): void {
   pollLoop(pollStrat, registerPoll, () => store
     .pollExecutableTasks(currentTimeUTC(), POLL_TASKS_LIMIT)
-    .then(tasks => {
-      tasks.forEach(task => {
+    .then((tasks) => {
+      tasks.forEach((task) => {
         messaging.emit('taskReadyToExecute', task)
       })
     })
-    .catch(e => {
+    .catch((e) => {
       messaging.emit('generalError', e)
       return Promise.resolve()
     })
@@ -44,12 +44,12 @@ export function pollLongQueuedTasks(
 ): void {
   pollLoop(pollStrat, registerPoll, () => store
     .pollLongQueuedTasks(currentTimeUTC(), timeoutSeconds, POLL_TASKS_LIMIT)
-    .then(tasks => {
-      tasks.forEach(task => {
+    .then((tasks) => {
+      tasks.forEach((task) => {
         messaging.emit('taskQueuedLong', task)
       })
     })
-    .catch(e => {
+    .catch((e) => {
       messaging.emit('generalError', e)
       return Promise.resolve()
     })
@@ -65,12 +65,12 @@ export function pollLongExecutingTasks(
 ): void {
   pollLoop(pollStrat, registerPoll, () => store
     .pollLongExecutingTasks(currentTimeUTC(), timeoutSeconds, POLL_TASKS_LIMIT)
-    .then(tasks => {
-      tasks.forEach(task => {
+    .then((tasks) => {
+      tasks.forEach((task) => {
         messaging.emit('taskExecutingLong', task)
       })
     })
-    .catch(e => {
+    .catch((e) => {
       messaging.emit('generalError', e)
       return Promise.resolve()
     })

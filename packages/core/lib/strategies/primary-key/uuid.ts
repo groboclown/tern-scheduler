@@ -9,7 +9,7 @@ import {
 } from '../../model'
 
 export const UUIDConfig = {
-  hostname: process.env.HOSTNAME || 'localhost'
+  hostname: process.env.HOSTNAME || 'localhost',
 }
 
 export const UUIDCreatePrimaryKeyStrategy: CreatePrimaryKeyStrategy = (): PrimaryKeyType => {

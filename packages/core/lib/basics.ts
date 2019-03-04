@@ -30,7 +30,7 @@ import {
 import {
   registerAlwaysRunDuplicateTaskStrategy,
   registerAlwaysSkipDuplicateTaskStrategy
-} from './strategies/duplicate-task';
+} from './strategies/duplicate-task'
 import {
   LeaseBehavior,
   NewScheduledJob,
@@ -49,11 +49,12 @@ const POLL_FOR_COMPLETION_MILLIS = MILLISECONDS_PER_SECOND
  * that supports stopping behavior.
  */
 export class PollingCallback {
+  readonly registerPollCallback: libStrats.RegisterPollCallback
+
   private count = 0
   private readonly runningCallbacks: { [id: string]: (() => void) } = {}
   private isActive: boolean = true
   private messaging: MessagingEventEmitter | null | undefined = null
-  readonly registerPollCallback: libStrats.RegisterPollCallback
 
   constructor(messaging?: MessagingEventEmitter) {
     this.messaging = messaging
@@ -63,15 +64,13 @@ export class PollingCallback {
         this.runningCallbacks[id] = callback
         setTimeout(() => {
           if (this.active) {
-            // TODO error trapping
             try {
               callback()
             } catch (e) {
               if (this.messaging) {
                 this.messaging.emit('generalError', e)
-              } else {
-                console.log(e)
               }
+              // Else no messaging registered, so we aren't logging it.
             }
           }
           delete this.runningCallbacks[id]
@@ -92,7 +91,7 @@ export class PollingCallback {
     return Object.keys(this.runningCallbacks).length
   }
 
-  stop() {
+  stop(): void {
     this.isActive = false
   }
 
@@ -184,7 +183,7 @@ export class TernConfiguration {
       leaseOwnerStrategy: this.strategies.createLeaseIdStrategy,
       leaseTimeSeconds: this.strategies.createLeaseTimeInSecondsStrategy(),
       retrySecondsDelay: args.retryLeaseTimeStrategy(),
-      registerRetryCallback: pc
+      registerRetryCallback: pc,
     }
   }
 }
@@ -317,9 +316,10 @@ export class TernClient {
  * A public facing facade on top of all the fun stuff in the scheduler.
  */
 export class TernScheduler {
-  private readonly jobExecution: libExecutor.JobExecutionManager
   readonly config: TernConfiguration
   readonly strategies: libStrats.AllStrategies
+
+  private readonly jobExecution: libExecutor.JobExecutionManager
 
   constructor(configuration: TernConfiguration, jobExecution: libExecutor.JobExecutionManager) {
     this.config = configuration
