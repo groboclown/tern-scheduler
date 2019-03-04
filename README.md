@@ -1,6 +1,9 @@
 # Tern - That Flocking Scheduler
 
-[![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg)](https://david-dm.org/groboclown/tern-scheduler?type=dev) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
+[![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
+<!-- As a multi-project repo, these don't make much sense.
+ [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg)](https://david-dm.org/groboclown/tern-scheduler?type=dev)
+-->
 
 Tern aims to be a cluster-friendly scheduling service, able to provide reliability and high availability in the scheduling service.
 
@@ -36,10 +39,10 @@ Tern Scheduler is primarily a scheduling library ("tern-core") along with additi
 
 All uses of the scheduling API start out the same. Create a data store implementation and setup the configuration.
 
-```(typescript)
+```typescript
 import { TernConfiguration, PollingCallback } from '@tern-scheduler/core';
 
-const datastore = ;
+const datastore = createMyOwnDatastore();
 const pollingCallback = new PollingCallback();
 const config = new TernConfiguration({
   // Your data store, based on your specific environment.
@@ -80,7 +83,7 @@ If you really need to, there are additional default strategies you can override.
 
 The API client is used to monitor schedule and task activity, and to manage scheduled jobs.  It returns results using the standard Promise class.
 
-```(javascript)
+```typescript
 import { TernClient } from '@tern-scheduler/core';
 
 const client = new TernClient(config);
@@ -101,8 +104,8 @@ client.createScheduledJob(scheduledJobDefinition)
 
 ### Scheduler Service
 
-```(javascript)
-import { TernScheduler } from '@tern-scheduler/core'
+```typescript
+import { TernScheduler } from '@tern-scheduler/core';
 
 const scheduler = new TernScheduler(config,
     // You will need to provide a way to connect your job
@@ -250,6 +253,6 @@ Repairing scheduled jobs and tasks in an uncertain state needs to be handled.  T
 
 If we want to cancel one future task, then doing so should set the task to a new "never run" state, and peel a new subsequent task as though the just-canceled task started then completed.  It's a new "finished" state.  This is an easy win for functionality.
 
-### Cron
+### CRON
 
 The cron implementation isn't there yet.  Right now, writing the "when to fire the next job" is a DIY project.

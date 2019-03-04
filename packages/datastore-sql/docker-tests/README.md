@@ -31,7 +31,7 @@ $ MYSQL_DB=tern MYSQL_USERNAME=tern-user MYSQL_PASSWORD=tern-pw MYSQL_PORT=19000
 
 Start the service:
 
-```(bash)
+```bash
 $ docker run --name tern-postgres \
     -e POSTGRES_USER=tern-user \
     -e POSTGRES_PASSWORD=tern-pw \
@@ -42,7 +42,7 @@ $ docker run --name tern-postgres \
 
 Run the tests:
 
-```(bash)
+```bash
 $ POSTGRES_DB=tern POSTGRES_USERNAME=tern-user POSTGRES_PASSWORD=tern-pw POSTGRES_PORT=19001 npm run test
 ```
 
@@ -53,7 +53,7 @@ $ POSTGRES_DB=tern POSTGRES_USERNAME=tern-user POSTGRES_PASSWORD=tern-pw POSTGRE
 
 In order to run the Microsoft SQL Server, you need to accept the [license agreement](https://go.microsoft.com/fwlink/?linkid=857698)![extern](../../../site/img/extern.svg), and acknowledge this by passing `ACCEPT_EULA=Y` environment variable.
 
-```(bash)
+```bash
 $ docker run --name tern-mssql \
     -e 'ACCEPT_EULA=Y' \
     -e 'SA_PASSWORD=tern-pw-1234' \
@@ -63,7 +63,7 @@ $ docker run --name tern-mssql \
 
 Run the tests:
 
-```(bash)
+```bash
 $ MSSQL_DB=master MSSQL_USERNAME=sa MSSQL_PASSWORD=tern-pw-1234 MSSQL_PORT=19002 npm run test
 ```
 

@@ -8,7 +8,7 @@ You need to first create and initialize a `Sequelize` object with the database c
 
 Then, use that object to create the `datastore` instance:
 
-```(typescript)
+```typescript
 import { Sequelize } from 'sequelize';
 import { createSqlDataStore } from '@tern-scheduler/datastore-sql';
 
@@ -21,7 +21,7 @@ const datastore = createSqlDataStore(sequelize);
 
 The `createSqlDataStore` function can also receive an optional logger function argument.  If provided, it takes a SQL value as the first argument, indicating the generated SQL by the `sequelize` command, and an optional second argument which is the time the execution of said SQL statement took to run.  Some commands, such as table creation, do not report the time taken, so the value will be `undefined`.
 
-```(typescript)
+```typescript
 const datastore = createSqlDataStore(sequelize, (sql: string, timeMillis?: number) => {
     console.log(`Ran [${sql}] in ${timeMillis} ms`);
 });
@@ -43,7 +43,7 @@ If you don't have those databases installed locally, then you can use Docker to 
 
 To run the tests with SQLite, you need to have it locally installed.  Then, run the tests with the SQLITE flag set:
 
-```(bash)
+```bash
 $ SQLITE=y npm run test
 ```
 
