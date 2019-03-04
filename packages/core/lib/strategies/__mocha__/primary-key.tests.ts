@@ -1,7 +1,7 @@
 import chai from 'chai'
-import { CreatePrimaryKeyStrategyRegistry, CreatePrimaryKeyStrategy } from "../primary-key/api";
-import { addUUIDCreatePrimaryKeyStrategy } from "../primary-key";
-import { UUID_PK_STRAT_NAME } from "../primary-key/uuid";
+import { CreatePrimaryKeyStrategyRegistry, CreatePrimaryKeyStrategy } from '../primary-key/api'
+import { addUUIDCreatePrimaryKeyStrategy } from '../primary-key'
+import { UUID_PK_STRAT_NAME } from '../primary-key/uuid'
 const expect = chai.expect
 
 describe('primary-key', () => {

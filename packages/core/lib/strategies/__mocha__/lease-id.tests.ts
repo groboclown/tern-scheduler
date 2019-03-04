@@ -1,7 +1,7 @@
 import chai from 'chai'
-import { CreateLeaseIdStrategy, CreateLeaseIdStrategyRegistry } from "../lease-id/api";
-import { addUUIDCreateLeaseIdStrategy } from "../lease-id";
-import { UUID_LEASE_ID_STRAT_NAME } from "../lease-id/uuid";
+import { CreateLeaseIdStrategy, CreateLeaseIdStrategyRegistry } from '../lease-id/api'
+import { addUUIDCreateLeaseIdStrategy } from '../lease-id'
+import { UUID_LEASE_ID_STRAT_NAME } from '../lease-id/uuid'
 const expect = chai.expect
 
 describe('lease-id', () => {

@@ -9,10 +9,7 @@ import {
 } from '../../model'
 
 export const UUIDConfig = {
-  hostname:
-    process.env.HOSTNAME === undefined
-      ? 'localhost'
-      : process.env.HOSTNAME
+  hostname: process.env.HOSTNAME || 'localhost'
 }
 
 export const UUIDCreateLeaseIdStrategy: CreateLeaseIdStrategy = (): LeaseIdType => {

@@ -1,6 +1,6 @@
 # Tern - That Flocking Scheduler
 
-[![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
+[![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg)](https://david-dm.org/groboclown/tern-scheduler?type=dev) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
 
 Tern aims to be a cluster-friendly scheduling service, able to provide reliability and high availability in the scheduling service.
 
