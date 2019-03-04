@@ -13,24 +13,25 @@ services:
   - docker
 
 env:
-  - SQLITE=y
+  global:
+    - SQLITE=y
 
-  # Docker-based database settings.
-  # These values are based on the docker-compose parameters.
-  - MYSQL_DB=tern
-  - MYSQL_USERNAME=tern-user
-  - MYSQL_PASSWORD=tern-pw
-  - MYSQL_PORT=19000
+    # Docker-based database settings.
+    # These values are based on the docker-compose parameters.
+    - MYSQL_DB=tern
+    - MYSQL_USERNAME=tern-user
+    - MYSQL_PASSWORD=tern-pw
+    - MYSQL_PORT=19000
 
-  - POSTGRES_DB=tern
-  - POSTGRES_USERNAME=tern-user
-  - POSTGRES_PASSWORD=tern-pw
-  - POSTGRES_PORT=19001
+    - POSTGRES_DB=tern
+    - POSTGRES_USERNAME=tern-user
+    - POSTGRES_PASSWORD=tern-pw
+    - POSTGRES_PORT=19001
 
-  - MSSQL_DB=master
-  - MSSQL_USERNAME=sa
-  - MSSQL_PASSWORD=tern-pw-1234
-  - MSSQL_PORT=19002
+    - MSSQL_DB=master
+    - MSSQL_USERNAME=sa
+    - MSSQL_PASSWORD=tern-pw-1234
+    - MSSQL_PORT=19002
 
 
 #before_install:
