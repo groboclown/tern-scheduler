@@ -97,4 +97,11 @@ export interface ScheduledJobModel extends BaseModel {
    */
   readonly previousSchedule: PrimaryKeyType | null
   readonly previousReason: string | null
+
+  /**
+   * Repairs may themselves be terminated early.  This keeps track of the
+   * last repair state, so that resuming a repair can pick up where the
+   * last one left off.
+   */
+  readonly repairState: string | null
 }

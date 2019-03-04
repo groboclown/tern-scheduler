@@ -67,6 +67,6 @@ Run the tests:
 $ MSSQL_DB=master MSSQL_USERNAME=sa MSSQL_PASSWORD=tern-pw-1234 MSSQL_PORT=19002 npm run test
 ```
 
-(the default value for `MYSQL_HOST` is `localhost`)
+(the default value for `MSSQL_HOST` is `localhost`)
 
 Note that with a real Microsoft SQL Server instance, you wouldn't use the `master` database.

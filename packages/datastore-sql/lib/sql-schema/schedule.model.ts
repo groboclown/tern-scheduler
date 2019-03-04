@@ -116,4 +116,10 @@ export class ScheduledJob extends Model<ScheduledJob> implements datastore.db.Sc
     type: DataType.STRING(256)
   })
   previousReason!: string | null
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true
+  })
+  repairState!: string | null
 }

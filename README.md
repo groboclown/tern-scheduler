@@ -80,7 +80,7 @@ If you really need to, there are additional default strategies you can override.
 
 The API client is used to monitor schedule and task activity, and to manage scheduled jobs.  It returns results using the standard Promise class.
 
-```(typescript)
+```(javascript)
 import { TernClient } from '@tern-scheduler/core';
 
 const client = new TernClient(config);
@@ -101,7 +101,7 @@ client.createScheduledJob(scheduledJobDefinition)
 
 ### Scheduler Service
 
-```(typescript)
+```(javascript)
 import { TernScheduler } from '@tern-scheduler/core'
 
 const scheduler = new TernScheduler(config,
@@ -249,3 +249,7 @@ Repairing scheduled jobs and tasks in an uncertain state needs to be handled.  T
 ### One Time Task Removal
 
 If we want to cancel one future task, then doing so should set the task to a new "never run" state, and peel a new subsequent task as though the just-canceled task started then completed.  It's a new "finished" state.  This is an easy win for functionality.
+
+### Cron
+
+The cron implementation isn't there yet.  Right now, writing the "when to fire the next job" is a DIY project.
