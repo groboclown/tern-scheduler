@@ -9,13 +9,11 @@
     "build:datastore-sql": "cd packages/datastore-sql && npm run build",
     "build:rest-api": "cd packages/rest-api && npm run build",
     "build": "npm run build:core && npm run build:cli && npm run build:datastore-sql && npm run build:rest-api",
-
     "test:core": "cd packages/core && npm run test",
     "test:cli": "cd packages/cli && npm run test",
     "test:datastore-sql": "cd packages/datastore-sql && npm run test",
     "test:rest-api": "cd packages/rest-api && npm run test",
     "test": "npm run test:core && npm run test:cli && npm run test:datastore-sql && npm run test:rest-api",
-
     "bootstrap": "./node_modules/.bin/lerna bootstrap"
   },
   "keywords": [
