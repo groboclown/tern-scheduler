@@ -49,6 +49,7 @@ import {
   isTaskCreationStrategyAfterFinish
 } from '../strategies/task-creation/api'
 import { SCHEDULE_STATE_START_TASK, SCHEDULE_STATE_END_TASK, SCHEDULE_STATE_PASTURE } from '../model/schedule'
+import { toUTC } from '../internal/time-util'
 
 
 /**
@@ -266,7 +267,8 @@ export function taskFinished(
                 // Queue a retry task
                 // Retry time is based on when the task was discovered to be failed,
                 // which is the "now" time.
-                const retryTime = new Date(now.valueOf())
+                // Note that we're keeping the date in UTC.
+                const retryTime = toUTC(now)
                 retryTime.setSeconds(retryTime.getSeconds() + retryInSeconds)
                 // Check if there's another task already in queued or running state
                 // for this schedule.  If so, run duplicate strategy logic.

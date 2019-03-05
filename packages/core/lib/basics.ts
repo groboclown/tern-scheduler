@@ -98,6 +98,8 @@ export class PollingCallback {
   stopAndWait(timeoutSeconds?: number): Promise<void> {
     this.isActive = false
     const ts = timeoutSeconds === undefined ? DEFAULT_WAIT_FOR_COMPLETION_SECONDS : timeoutSeconds
+    // We are okay to use new Date() here, because the end is measured relative to
+    // the returned time.  We don't care that the date is in UTC or not.
     const timedOut = new Date().valueOf() + (ts * MILLISECONDS_PER_SECOND)
     return new Promise((resolve, reject) => {
       const tryIt = () => {

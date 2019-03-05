@@ -22,8 +22,8 @@ import {
 import {
   MessagingEventEmitter
 } from '../../messaging'
-import { DataStore } from '../../datastore';
-import { DatabaseDataStore } from '../../datastore/db-impl';
+import { DataStore } from '../../datastore'
+import { DatabaseDataStore } from '../../datastore/db-impl'
 
 export class ImmediateLeaseBehavior implements LeaseBehavior {
   constructor(
@@ -44,12 +44,12 @@ export function createStaticPKStrategy(id: PrimaryKeyType): CreatePrimaryKeyStra
 
 export function getTaskRow(store: MemoryDatabase, pk: PrimaryKeyType): TaskModel {
   const table = store.taskTable
-  return table.rows.filter(r => r.pk === pk)[0]
+  return table.rows.filter((r) => r.pk === pk)[0]
 }
 
 export function getScheduleRow(store: MemoryDatabase, pk: PrimaryKeyType): ScheduledJobModel {
   const table = store.scheduledJobTable
-  return table.rows.filter(r => r.pk === pk)[0]
+  return table.rows.filter((r) => r.pk === pk)[0]
 }
 
 export function setLockState(
@@ -61,7 +61,7 @@ export function setLockState(
 ): ScheduledJobModel {
   // Cast row to any to allow writes
   const row = getScheduleRow(store, pk)
-  const arow = <any>row
+  const arow = row as any
   arow.leaseOwner = leaseOwner
   arow.updateState = updateState
   arow.leaseExpires = leaseExpires
@@ -69,9 +69,10 @@ export function setLockState(
 }
 
 export class BlockingPromise<T> {
+  public readonly p: Promise<T>
+
   private innerResolve: ((x: T) => void) | null = null
   private innerReject: ((x: any) => void) | null = null
-  public readonly p: Promise<T>
 
   constructor() {
     this.p = new Promise((res, rej) => {
@@ -162,8 +163,8 @@ export class ProxyDataStore implements DataStore {
           reject(e)
         }
       })
-        .then(() => (<any>this.proxy)[name].apply(this.proxy, args))
-        .then(res => new Promise((resolve, reject) => {
+        .then(() => (this.proxy as any)[name].apply(this.proxy, args))
+        .then((res) => new Promise((resolve, reject) => {
           try {
             const r = aCall(res)
             if (r instanceof Promise) {
@@ -257,20 +258,26 @@ export class ProxyDataStore implements DataStore {
   markTaskCompleted(task: TaskModel, now: Date, info: string): Promise<void> {
     throw new Error('unexpected call to datastore')
   }
-  markTaskFailed(task: TaskModel, now: Date, expectedCurrentState: TaskStateType, failedState: "complete-queued" | "complete-error" | "failed" | "fail-restarted", info: string): Promise<void> {
+  markTaskFailed(
+    task: TaskModel, now: Date, expectedCurrentState: TaskStateType,
+    failedState: "complete-queued" | "complete-error" | "failed" | "fail-restarted", info: string
+  ): Promise<void> {
     throw new Error('unexpected call to datastore')
   }
   deleteFinishedTask(task: TaskModel): Promise<boolean> {
     throw new Error('unexpected call to datastore')
   }
-  leaseScheduledJob(jobPk: string, updateOperation: ScheduleUpdateStateType, updateTaskPk: string | null, leaseId: string, now: Date, leaseTimeSeconds: number): Promise<void> {
-    throw new Error("Method not implemented.");
+  leaseScheduledJob(
+    jobPk: string, updateOperation: ScheduleUpdateStateType,
+    updateTaskPk: string | null, leaseId: string, now: Date, leaseTimeSeconds: number
+  ): Promise<void> {
+    throw new Error("Method not implemented.")
   }
   releaseScheduledJobLease(leaseId: string, jobPk: string, pasture?: boolean | undefined): Promise<void> {
-    throw new Error("Method not implemented.");
+    throw new Error("Method not implemented.")
   }
   markLeasedScheduledJobNeedsRepair(jobPk: string, leaseId: string, now: Date): Promise<void> {
-    throw new Error("Method not implemented.");
+    throw new Error("Method not implemented.")
   }
 }
 
