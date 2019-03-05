@@ -270,7 +270,7 @@ describe('cron', () => {
           startAfter: null,
           // End date is "now", which is before any schedule
           // can run.
-          endBy: now,
+          endBy: toTimeStruct(now) || null,
         }
         const ret = toTimeStruct(nextCronTime(model, now))
         expect(ret).to.be.null
@@ -291,7 +291,7 @@ describe('cron', () => {
           utcOffsetMinutes: 0,
           startAfter: null,
           // End date is before the next match date.
-          endBy: end,
+          endBy: toTimeStruct(end) || null,
         }
         const ret = toTimeStruct(nextCronTime(model, now))
         expect(ret).to.be.null
@@ -310,7 +310,7 @@ describe('cron', () => {
           minutes: [0],
           seconds: [0],
           utcOffsetMinutes: 0,
-          startAfter: start,
+          startAfter: toTimeStruct(start) || null,
           endBy: null,
         }
         const ret = toTimeStruct(nextCronTime(model, now))
@@ -323,7 +323,6 @@ describe('cron', () => {
           seconds: 0,
           millis: 0,
         } as TimeStruct)
-
       })
     })
   })
