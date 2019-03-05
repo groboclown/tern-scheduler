@@ -1,4 +1,22 @@
-// import { toUTC } from "../../internal/time-util";
+import {
+  cloneDateTime,
+  TimeStruct,
+  fromTimeStruct,
+  isTimeStruct,
+} from '../../internal/time-util'
+import {
+  TaskCreationStrategyAfterStart,
+  TaskCreationAction,
+  TaskCreationDisable,
+  TaskCreationQueue,
+} from './api'
+import { ScheduledJobModel } from '../../model'
+import { InvalidScheduleDefinitionError } from '../../errors/strategy-errors'
+import { isNumber, isObject, isArray, isString } from 'util'
+
+
+// TODO split this file into multiple files to make it easier to understand.
+
 
 export const SCHEDULE_CRON_MODEL = 'cron'
 
@@ -25,13 +43,96 @@ export interface CronModel {
  * `[1,2,3,4,5]`
  */
 export interface ScheduleCronModel extends CronModel {
+  /**
+   * The original cron expression entered by the user.
+   */
+  cronExpression: string
 
-  // offset, in minutes, from UTC for the scheduled execution.
-  // For example, India is UTC+05:30, so it would be 330 (5 * 60 + 30).
+  /**
+   * Offset, in minutes, from UTC for the scheduled execution.
+   * For example, India is UTC+05:30, so it would be -330 (5 * 60 + 30).
+   * The "offset" is how to adjust the date to move it to UTC.  Because
+   * India tome (UTC+5:30) is 5 hours *ahead* of UTC, it must go
+   * 5 hours earlier to equal UTC.  Likewise, US Eastern Standard Time
+   * is UTC-5:00, so it must add 5 hours to equal UTC.
+   *
+   * This mechanism has one huge failing.  It means that if you live in
+   * an area that is affected by daylight savings, the schedule will
+   * wander by an hour depending on the time of year.  This cron
+   * implementation will not attempt to reconcile that, as it gets us
+   * in hairier situations that just aren't worth anyone's time (no pun
+   * intended).  For example, schedules that trigger in that middle hour
+   * might trigger twice, and laws of the land might change when the
+   * time zone adjustment happens, which would require library updates.
+   */
   utcOffsetMinutes: number
 
-  startAfter: Date | null
-  endBy: Date | null
+  // Storage of these times are TimeStruct to allow for easy
+  // JSON storage.
+  startAfter: TimeStruct | null
+  endBy: TimeStruct | null
+}
+
+
+function isScheduleCronModel(v: any): v is ScheduleCronModel {
+  if (!v) {
+    return false
+  }
+  return isObject(v)
+    && isArray(v.seconds)
+    && isArray(v.minutes)
+    && isArray(v.hours)
+    && isArray(v.daysOfMonth)
+    && isArray(v.months)
+    && isArray(v.daysOfWeek)
+    && isString(v.cronExpression)
+    && isNumber(v.utcOffsetMinutes)
+    && (v.startAfter === null || isTimeStruct(v.startAfter))
+    && (v.endBy === null || isTimeStruct(v.endBy))
+}
+
+
+export const CronTaskCreationStrategy: TaskCreationStrategyAfterStart = {
+  after: 'start',
+
+  createFromNewSchedule: (now: Date, schedule: ScheduledJobModel): Date => {
+    const model = getScheduleDefinition(schedule)
+    const ret = nextCronTime(model, now)
+    if (!ret) {
+      throw new InvalidScheduleDefinitionError(
+        schedule.pk, schedule.scheduleDefinition,
+        `No first scheduled time within ${MAXIMUM_YEAR_IN_FUTURE} years`
+      )
+    }
+    return ret
+  },
+
+  createAfterTaskStarts: (now: Date, schedule: ScheduledJobModel): TaskCreationAction => {
+    const model = getScheduleDefinition(schedule)
+    const ret = nextCronTime(model, now)
+    if (!ret) {
+      return { action: 'disable' } as TaskCreationDisable
+    }
+    return {
+      action: 'queue',
+      runAt: ret,
+    } as TaskCreationQueue
+  },
+}
+
+
+function getScheduleDefinition(schedule: ScheduledJobModel): ScheduleCronModel {
+  const defStr = schedule.scheduleDefinition
+  let def: any
+  try {
+    def = JSON.parse(defStr)
+  } catch (e) {
+    throw new InvalidScheduleDefinitionError(schedule.pk, defStr, `Not valid json: ${e}`)
+  }
+  if (!isScheduleCronModel(def)) {
+    throw new InvalidScheduleDefinitionError(schedule.pk, defStr, `Not valid schedule definition`)
+  }
+  return def
 }
 
 
@@ -39,13 +140,13 @@ const MAXIMUM_YEAR_IN_FUTURE = 10
 
 
 export function nextCronTime(model: ScheduleCronModel, now: Date): Date | null {
-  if (model.endBy && now >= model.endBy) {
-    return null
-  }
+  const startAfter = model.startAfter === null ? null : fromTimeStruct(model.startAfter)
+  const endBy = model.endBy === null ? null : fromTimeStruct(model.endBy)
+
   // Create a copy of the date, ensuring that it remains in UTC.
-  let ret = new Date(now.valueOf())
-  if (model.startAfter && ret < model.startAfter) {
-    ret = new Date(model.startAfter.valueOf())
+  let ret = cloneDateTime(now)
+  if (startAfter && ret < startAfter) {
+    ret = cloneDateTime(startAfter)
   }
 
   const farthestYear = now.getFullYear() + MAXIMUM_YEAR_IN_FUTURE
@@ -56,6 +157,11 @@ export function nextCronTime(model: ScheduleCronModel, now: Date): Date | null {
 
   // The millisecond isn't specified by cron, so reset it to 0
   ret.setMilliseconds(0)
+
+  // Early exit for end-of-time checking
+  if (endBy && now >= endBy) {
+    return null
+  }
 
   // For cron matching, we must convert it back to the requestor's time zone
   ret.setMinutes(ret.getMinutes() + model.utcOffsetMinutes)
@@ -143,6 +249,18 @@ export function nextCronTime(model: ScheduleCronModel, now: Date): Date | null {
       const res = findNext(ret.getDate(), model.daysOfMonth,
         (next) => {
           // no loop-around
+          // Check if it matches expectations.  That is, setting this
+          // date to 31 when the month is Februrary will cause the date
+          // to be March 3 (or 2).
+          const trial = cloneDateTime(ret)
+          trial.setDate(next)
+          if (trial.getMonth() !== ret.getMonth()) {
+            // Invalid date; it's beyond what the current month can
+            // store.  So we incrment to the next month and try again.
+            return 'inc'
+          }
+
+          // The date is valid for this month/year.
           ret.setDate(next)
 
           // Check if this lines up with the day of the week.
@@ -174,7 +292,7 @@ export function nextCronTime(model: ScheduleCronModel, now: Date): Date | null {
   // Must convert the time back to UTC
   ret.setMinutes(ret.getMinutes() - model.utcOffsetMinutes)
 
-  if (model.endBy && ret >= model.endBy || ret.getFullYear() >= farthestYear) {
+  if (endBy && ret >= endBy || ret.getFullYear() >= farthestYear) {
     return null
   }
   return ret
@@ -201,6 +319,9 @@ const ALLOWED_RANGES: { [key: string]: [number, number] } = {
  * 1. day of month
  * 1. month
  * 1. day of week; 0 or 7 are Sunday
+ *
+ * The returned value isn't necessarily a valid model.  It doesn't guarantee that
+ * there are enough values in each array.
  *
  * @param cronExpression
  */

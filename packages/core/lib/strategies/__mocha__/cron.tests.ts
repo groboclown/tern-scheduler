@@ -8,8 +8,8 @@ import {
   nextCronTime
 } from '../task-creation/cron'
 import {
-  timeStruct, TimeStruct,
-} from './util'
+  toTimeStruct, TimeStruct,
+} from '../../internal/time-util'
 const expect = chai.expect
 
 
@@ -154,6 +154,7 @@ describe('cron', () => {
       it('returns right now', () => {
         const now = new Date(2000, 0, 30, 0, 0, 0, 0)
         const model: ScheduleCronModel = {
+          cronExpression: '',
           months: [1],
           daysOfMonth: [31],
           daysOfWeek: rangeNumbers(0, 6),
@@ -164,7 +165,7 @@ describe('cron', () => {
           startAfter: null,
           endBy: null,
         }
-        const ret = timeStruct(nextCronTime(model, now))
+        const ret = toTimeStruct(nextCronTime(model, now))
         expect(ret).to.deep.equal({
           year: 2000,
           month: 1,
@@ -180,6 +181,7 @@ describe('cron', () => {
       it('returns right now', () => {
         const now = new Date(2000, 11, 31, 23, 59, 58, 0)
         const model: ScheduleCronModel = {
+          cronExpression: '',
           months: [1],
           daysOfMonth: [1],
           daysOfWeek: rangeNumbers(0, 6),
@@ -190,7 +192,7 @@ describe('cron', () => {
           startAfter: null,
           endBy: null,
         }
-        const ret = timeStruct(nextCronTime(model, now))
+        const ret = toTimeStruct(nextCronTime(model, now))
         expect(ret).to.deep.equal({
           year: 2001,
           month: 1,
@@ -202,31 +204,126 @@ describe('cron', () => {
         } as TimeStruct)
       })
     })
-    describe('when can run at a future point, looping over each value, for India time', () => {
-      it('returns right now', () => {
+    describe('when can run at a future point, looping over each value, for CST', () => {
+      it('returns the end of next year', () => {
         const now = new Date(2000, 11, 31, 23, 59, 58, 0)
         const model: ScheduleCronModel = {
+          cronExpression: '',
           months: [1],
           daysOfMonth: [1],
           daysOfWeek: rangeNumbers(0, 6),
           hours: [0],
           minutes: [0],
           seconds: [0],
-          utcOffsetMinutes: 330, // UTC+5:30
+          utcOffsetMinutes: 360, // UTC-600,
           startAfter: null,
           endBy: null,
         }
-        const ret = timeStruct(nextCronTime(model, now))
+        const ret = toTimeStruct(nextCronTime(model, now))
         expect(ret).to.deep.equal({
           // Next match is in 2002, but it jumps back due to timezone change.
+          // This is an interesting problem here.  The match SHOULD be
+          // January 1, 2001 (in just 2 seconds), but because "now" is UTC,
+          // and the match is CST, it needs to roll all the way to the end of
+          // the next year to match up.
           year: 2001,
           month: 12,
           day: 31,
           hours: 18,
-          minutes: 30,
+          minutes: 0,
           seconds: 0,
           millis: 0,
         } as TimeStruct)
+      })
+    })
+    describe('when the matcher will never match a real date', () => {
+      it('returns null', () => {
+        const now = new Date(2000, 11, 31, 23, 59, 58, 0)
+        const model: ScheduleCronModel = {
+          cronExpression: '',
+          months: [2],
+          daysOfMonth: [31],
+          daysOfWeek: rangeNumbers(0, 6),
+          hours: [0],
+          minutes: [0],
+          seconds: [0],
+          utcOffsetMinutes: 0,
+          startAfter: null,
+          endBy: null,
+        }
+        const ret = toTimeStruct(nextCronTime(model, now))
+        expect(ret).to.be.null
+      })
+    })
+    describe('now is past the end-by date', () => {
+      it('returns null', () => {
+        const now = new Date(2000, 11, 31, 23, 59, 58, 0)
+        const model: ScheduleCronModel = {
+          cronExpression: '',
+          months: [2],
+          daysOfMonth: [31],
+          daysOfWeek: rangeNumbers(0, 6),
+          hours: [0],
+          minutes: [0],
+          seconds: [0],
+          utcOffsetMinutes: 0,
+          startAfter: null,
+          // End date is "now", which is before any schedule
+          // can run.
+          endBy: now,
+        }
+        const ret = toTimeStruct(nextCronTime(model, now))
+        expect(ret).to.be.null
+      })
+    })
+    describe('rolled-over is past the end-by date', () => {
+      it('returns null', () => {
+        const now = new Date(2000, 0, 1, 0, 0, 0, 0)
+        const end = new Date(2000, 11, 1, 0, 0, 0, 0)
+        const model: ScheduleCronModel = {
+          cronExpression: '',
+          months: [12],
+          daysOfMonth: [31],
+          daysOfWeek: rangeNumbers(0, 6),
+          hours: [0],
+          minutes: [0],
+          seconds: [0],
+          utcOffsetMinutes: 0,
+          startAfter: null,
+          // End date is before the next match date.
+          endBy: end,
+        }
+        const ret = toTimeStruct(nextCronTime(model, now))
+        expect(ret).to.be.null
+      })
+    })
+    describe('before the start time', () => {
+      it('returns time after start', () => {
+        const now = new Date(2000, 11, 31, 23, 59, 58, 0)
+        const start = new Date(2002, 2, 10, 23, 59, 59, 10)
+        const model: ScheduleCronModel = {
+          cronExpression: '',
+          months: [3],
+          daysOfMonth: [11],
+          daysOfWeek: rangeNumbers(0, 6),
+          hours: [0],
+          minutes: [0],
+          seconds: [0],
+          utcOffsetMinutes: 0,
+          startAfter: start,
+          endBy: null,
+        }
+        const ret = toTimeStruct(nextCronTime(model, now))
+        expect(ret).to.deep.equal({
+          year: 2002,
+          month: 3,
+          day: 11,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          millis: 0,
+        } as TimeStruct)
+
       })
     })
   })

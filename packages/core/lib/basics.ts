@@ -37,6 +37,9 @@ import {
   createScheduledJob as createScheduledJobCore,
   disableSchedule as disableScheduleCore,
 } from './controller'
+import {
+  currentTimeLocal
+} from './internal/time-util'
 
 const MILLISECONDS_PER_SECOND = 1000
 const DEFAULT_LEASE_TIME_SECONDS = 300
@@ -98,13 +101,13 @@ export class PollingCallback {
   stopAndWait(timeoutSeconds?: number): Promise<void> {
     this.isActive = false
     const ts = timeoutSeconds === undefined ? DEFAULT_WAIT_FOR_COMPLETION_SECONDS : timeoutSeconds
-    // We are okay to use new Date() here, because the end is measured relative to
+    // We are okay to use local time here, because the end is measured relative to
     // the returned time.  We don't care that the date is in UTC or not.
-    const timedOut = new Date().valueOf() + (ts * MILLISECONDS_PER_SECOND)
+    const timedOut = currentTimeLocal().valueOf() + (ts * MILLISECONDS_PER_SECOND)
     return new Promise((resolve, reject) => {
       const tryIt = () => {
         if (this.activeCount() > 0) {
-          const now = new Date().valueOf()
+          const now = currentTimeLocal().valueOf()
           if (now > timedOut) {
             reject(new Error('timed out waiting for stop'))
           } else {

@@ -50,8 +50,7 @@
     "spec": [
       "lib/**/__mocha__/*.tests.ts"
     ],
-    "full-trace": true,
-    "bail": true
+    "full-trace": true
   },
   "nyc": {
     "include": [

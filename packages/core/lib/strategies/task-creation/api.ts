@@ -26,13 +26,21 @@ export function isTaskCreationDisable(v: TaskCreationAction): v is TaskCreationD
 
 export interface TaskCreationStrategyAfterFinish {
   after: 'finish'
+
+  /** Can throw an exception if the schedule definition is bad */
   createFromNewSchedule: (now: Date, schedule: ScheduledJobModel) => Date
+
+  /** Can throw an exception if the schedule definition is bad */
   createAfterTaskFinishes: (now: Date, schedule: ScheduledJobModel) => TaskCreationAction
 }
 
 export interface TaskCreationStrategyAfterStart {
   after: 'start'
+
+  /** Can throw an exception if the schedule definition is bad */
   createFromNewSchedule: (now: Date, schedule: ScheduledJobModel) => Date
+
+  /** Can throw an exception if the schedule definition is bad */
   createAfterTaskStarts: (now: Date, schedule: ScheduledJobModel) => TaskCreationAction
 }
 

@@ -39,7 +39,7 @@ import {
 } from '../errors'
 import { TaskNotFoundError } from '../errors/controller-errors'
 import { ExecutionJobId } from '../executor/types'
-import { toUTC } from '../internal/time-util'
+import { cloneDateTime } from '../internal/time-util'
 
 
 // Column names
@@ -558,7 +558,7 @@ export class DatabaseDataStore implements DataStore {
 
 function updateDate(date: Date, increaseSeconds: number): Date {
   // Note: keep the date in UTC.
-  const ret = toUTC(date)
+  const ret = cloneDateTime(date)
   ret.setSeconds(ret.getSeconds() + increaseSeconds)
   return ret
 }
