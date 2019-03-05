@@ -2,11 +2,15 @@
 
 import chai from 'chai'
 import {
+  ScheduleCronModel,
+} from '../task-creation/cron'
+import {
   cronToModel,
   convertToModel,
-  ScheduleCronModel,
+} from '../task-creation/cron/expression'
+import {
   nextCronTime
-} from '../task-creation/cron'
+} from '../task-creation/cron/next'
 import {
   toTimeStruct, TimeStruct,
 } from '../../internal/time-util'
