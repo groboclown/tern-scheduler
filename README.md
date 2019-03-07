@@ -1,9 +1,9 @@
 # Tern - That Flocking Scheduler
 
-[![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
-<!-- As a multi-project repo, these don't make much sense.
- [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg)](https://david-dm.org/groboclown/tern-scheduler?type=dev)
--->
+[![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![mit](site/img/mit.svg)](LICENSE) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
+
+[`@tern-scheduler/core`](packages/core) [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?type=dev)
+[`@tern-scheduler/datastore-sql`](packages/datastore-sql) [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev)
 
 Tern aims to be a cluster-friendly scheduling service, able to provide reliability and high availability in the scheduling service.
 
@@ -64,6 +64,10 @@ const config = new TernConfiguration({
   pollingCallback
 });
 
+// Add more strategies to meet your schedule and task needs
+scheduler.strategies.taskCreationStrategyRegistry
+  .register('custom', myCustomStrategy);
+
 // When you desire background polling tasks to stop, this call will cause all
 // the polling methods to drain out before quitting.
 pollingCallback.stopAndWait()
@@ -89,7 +93,7 @@ import { TernClient } from '@tern-scheduler/core';
 const client = new TernClient(config);
 client.createScheduledJob(scheduledJobDefinition)
   .then(schedule => {
-    console.log(`Created schedule ${schedule.displayName`);
+    console.log(`Created schedule ${schedule.displayName}`);
     return client.getActiveScheduledJobs()
   })
   .then(schedulePage => {
@@ -111,10 +115,6 @@ const scheduler = new TernScheduler(config,
     // You will need to provide a way to connect your job
     // execution framework with Tern.  See below for more details.
     createMyJobExecutionManager());
-
-// Add more strategies to meet your schedule and task needs
-scheduler.strategies.taskCreationStrategyRegistry
-  .register('custom', myCustomStrategy);
 ```
 
 

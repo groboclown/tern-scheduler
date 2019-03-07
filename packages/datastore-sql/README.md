@@ -1,5 +1,10 @@
 # Tern Scheduler SQL Database Backed DataStore
 
+[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler/status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev)
+[![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler)
+[![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
+
+
 Uses [`sequelize`](https://github.com/sequelize/sequelize) to connect to a database as the back-end storage mechanism for Tern Scheduler.
 
 # Usage
