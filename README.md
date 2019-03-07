@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![mit](site/img/mit.svg)](LICENSE) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
 
+| Child Packages | Status | |
+|---|---|---|
 | [`@tern-scheduler/core`](packages/core) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?type=dev) |
 | [`@tern-scheduler/datastore-sql`](packages/datastore-sql) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev) |
 | [`@tern-scheduler/cli`](packages/cli) | <!--[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler)--> | <!--[![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler?type=dev)--> |
