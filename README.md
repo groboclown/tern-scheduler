@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![mit](site/img/mit.svg)](LICENSE) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
 
-| Child Packages | Status | |
+| Packages | Status | |
 |---|---|---|
 | [`@tern-scheduler/core`](packages/core) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?type=dev) |
 | [`@tern-scheduler/datastore-sql`](packages/datastore-sql) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev) |
@@ -137,7 +137,7 @@ Tern uses these terms to describe different aspects of the system:
 
 ### Choosing a Data Store
 
-Tern was designed to allow for different data storage technologies, depending upon your requirements.  There are some basic, minimal requirements that the technology must provide in order for it to work.  The biggest one is "atomic, conditional commit" - the store needs to reliably provide some mechanism to set some values on a record if and only if some preconditions on that record are met, and it must do so safely if a different actor tries to perform the same behavior on the same record from anywhere on the network.  The [data store documentation](core/src/datastore/README.md) details the requirements and implementation guidelines.
+Tern was designed to allow for different data storage technologies, depending upon your requirements.  There are some basic, minimal requirements that the technology must provide in order for it to work.  The biggest one is "atomic, conditional commit" - the store needs to reliably provide some mechanism to set some values on a record if and only if some preconditions on that record are met, and it must do so safely if a different actor tries to perform the same behavior on the same record from anywhere on the network.  The [data store documentation](packages/core/src/datastore/README.md) details the requirements and implementation guidelines.
 
 If you are running with one of the out-of-the-box data stores, you just need to `require` the module and instantiate it according to its instructions (such as providing connection information).  Right now, those modules are:
 
@@ -151,7 +151,7 @@ Tern provides "hooks" for you to tell it a relationship between a job executor n
 
 Job executors fall into two categories - message based or polling.  Message based executors rely on the execution environment to push state-change notifications.  Polling executors require the client to make requests for the current state.
 
-All job executors implement the [JobExecutionManager](core/src/executor) interface.  Polling job executors will need to set up the poll mechanisms on the messaging connection, while message based ones will need to wire their message approaches to the message event emitter.
+All job executors implement the [JobExecutionManager](packages/core/src/executor) interface.  Polling job executors will need to set up the poll mechanisms on the messaging connection, while message based ones will need to wire their message approaches to the message event emitter.
 
 
 ### Choosing a Messaging Pipeline
@@ -205,7 +205,7 @@ Yes, you can change how the library discovers the current time.  By default, thi
 
 ### Handling Errors
 
-All errors encountered in the schedule are passed to the [event message emitter](core/src/messaging/README.md).  By default, errors are reported to standard error.  You can add a new handler by listening to the `generalError` event on the message emitter.
+All errors encountered in the schedule are passed to the [event message emitter](packages/core/src/messaging/README.md).  By default, errors are reported to standard error.  You can add a new handler by listening to the `generalError` event on the message emitter.
 
 ### Suspend State
 
