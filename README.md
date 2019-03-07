@@ -2,8 +2,10 @@
 
 [![Build Status](https://travis-ci.org/groboclown/tern-scheduler.svg?branch=master)](https://travis-ci.org/groboclown/tern-scheduler) [![mit](site/img/mit.svg)](LICENSE) [![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lernajs.io/)
 
-[`@tern-scheduler/core`](packages/core) [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?type=dev)<br/>
-[`@tern-scheduler/datastore-sql`](packages/datastore-sql) [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev)<br/>
+<span style="width:32em;"> [`@tern-scheduler/core`](packages/core) </span> [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?type=dev) <br/>
+<span style="width:32em;"> [`@tern-scheduler/datastore-sql`](packages/datastore-sql) </span> [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev) <br/>
+<span style="width:32em;"> [`@tern-scheduler/cli`](packages/cli) </span> <!--[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler?type=dev)--> <br/>
+<span style="width:32em;"> [`@tern-scheduler/rest-api`](packages/rest-api) </span> <!--[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/rest-api)](https://david-dm.org/groboclown/tern-scheduler) [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/rest-api)](https://david-dm.org/groboclown/tern-scheduler?type=dev)--> <br/>
 
 Tern aims to be a cluster-friendly scheduling service, able to provide reliability and high availability in the scheduling service.
 
@@ -207,37 +209,6 @@ All errors encountered in the schedule are passed to the [event message emitter]
 
 The scheduler does not support a proper "suspend" state, where tasks are put on pause indefinitely.  Instead, this can be simulated by putting a schedule out to pasture, then creating a new one when the schedule should be resumed.  This will remove historical connections
 
-## Under the Covers
-
-Tern breaks up the problem of scheduling job executions into these more basic problems:
-
-* **Scheduled Job Management.**  The user defines scheduled jobs to execute at some time in the future (possibly the immediate future).  These jobs may run on a repeated pattern.  The system needs a way to manage these scheduled jobs - adding, creating, and updating them.
-* **Next Schedule Execution Prediction.**  The *schedule strategy* associated with the scheduled job is in charge of "peeling off" the next job execution time from the scheduled job.  These are put into a queue for future execution.
-* **Job Execution State Management.** The queued *tasks* will eventually hit their "execution time", at which point the system must begin the state management for running the registered job execution framework.
-
-### Scheduled Job and Task Execution State
-
-In order for the system to handle failure conditions, the executing jobs are put into various states.  Understanding these states can help you fix indeterminate state processing, or to update the software.
-
-The server that handled the state change creates a message that indicates the state change.  The messages are not necessary for the operation of the service, but are there for the benefit of system architects that want to integrate the service with their solution.
-
-The implementation uses a variation on the [two-phase commit protocol](https://en.wikipedia.org/wiki/Two-phase_commit_protocol)![extern](./site/img/extern.svg) with lease expiration to allow for recovering from failed nodes.  Additionally, attempts to obtain the lock have retry mechanisms with an eventual failure.  Locks are made on the scheduled job to perform operations on the scheduled job itself or on its child task objects (with a few rare and well considered exceptions).
-
-1. Commit request phase
-   * In this phase, a process (a thread of behavior within a node) makes an atomic conditional write operation to the data store to allocate the lock.  If the lock is already allocated, the request fails.  Note that this takes advantage of whatever locking mechanism the underlying data store has.
-   * Failures can be retried with different timeouts (that's one of the strategies).  After sufficient number of retries, the lock acquisition fails.
-   * Success puts the scheduled job in the "updating" state, which is the "lock obtained" phase.
-2. Commit phase
-   * The process, which now has a lease on the lock, performs an update to the data objects.  These operations should be very tightly controlled and "quick".  As the library is written now, this phase includes only data store manipulations plus the one call-out to the job execution service.
-   * Any unexpected failures here put the scheduled job in an "update-error" state, which means that the scheduled job and its tasks must be repaired before it can be unlocked.
-3. Commit complete phase
-   * Once the in-lock actions complete, the process releases the lock.
-   * This might fail due to something else "stealing" the lock if the lease expired.
-4. Lock repair phase
-   * If a scheduled job is in the "update-error" state, then its state is indeterminate.
-   * If the lock has expired, then its state should be determined through the task state.
-   * If the software determines that it wasn't due to a Tern coding error, then the state should be repaired based on the states of its running tasks.
-
 
 ## Implementation TO-DOs
 
@@ -253,6 +224,3 @@ Repairing scheduled jobs and tasks in an uncertain state needs to be handled.  T
 
 If we want to cancel one future task, then doing so should set the task to a new "never run" state, and peel a new subsequent task as though the just-canceled task started then completed.  It's a new "finished" state.  This is an easy win for functionality.
 
-### CRON
-
-The cron implementation isn't there yet.  Right now, writing the "when to fire the next job" is a DIY project.
