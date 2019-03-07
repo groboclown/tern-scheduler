@@ -100,7 +100,7 @@ export interface DataStore {
    *
    * @param job
    */
-  disableScheduledJob(sched: ScheduledJobModel, leaseId: LeaseIdType): Promise<boolean>
+  disableScheduledJob(sched: ScheduledJobModel, leaseId: LeaseIdType, reason?: string): Promise<boolean>
 
   /**
    * Attempts to delete the job only if it is disabled.  If the job is not in

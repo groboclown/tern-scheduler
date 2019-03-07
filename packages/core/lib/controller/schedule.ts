@@ -27,6 +27,7 @@ import {
   ScheduleUpdateStateType,
 } from '../model/schedule'
 import { MessagingEventEmitter } from '../messaging'
+import { InvalidScheduleDefinitionError } from '../errors/strategy-errors'
 
 
 /**
@@ -177,14 +178,23 @@ export function createScheduledJobAlone<T>(
     })
     // With successful update behavior, release the lease and return the result.
     .then((result) => {
-      const needsRepair = isLeaseExitStateError(result)
+      // There are two potential error states here: the schedule definition was
+      // in a bad state, or some other internal issue.  Bad schedule definitions
+      // are a user error and lead to an immediate disabled state.
       const pasture = result.pasture
-      logDebug('createScheduledJobAlone', `Completed execution: repair? ${needsRepair}, pasture? ${pasture}`)
-      return (
-        needsRepair
-          ? store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now)
-          : store.releaseScheduledJobLease(leaseOwner, sched.pk, pasture)
-      )
+      // logDebug('createScheduledJobAlone', `Completed execution: repair? ${needsRepair}, pasture? ${pasture}`)
+      let ret: Promise<any>
+      if (isLeaseExitStateError(result)) {
+        if (result.error instanceof InvalidScheduleDefinitionError) {
+          messaging.emit('invalidScheduleDefinition', sched)
+          ret = store.disableScheduledJob(sched, leaseOwner, result.error.message)
+        } else {
+          ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now)
+        }
+      } else {
+        ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, pasture)
+      }
+      return ret
         .catch((e) => {
           // The lease release failed.  This error isn't as important as
           // the underlying original error...
@@ -273,13 +283,19 @@ export function runUpdateInLease<T>(
 
         // With successful update behavior, release the lease and return the result.
         .then((result) => {
-          const needsRepair = isLeaseExitStateError(result)
           const pasture = result.pasture
-          return (
-            needsRepair
-              ? store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now)
-              : store.releaseScheduledJobLease(leaseOwner, sched.pk, pasture)
-          )
+          let ret: Promise<any>
+          if (isLeaseExitStateError(result)) {
+            if (result.error instanceof InvalidScheduleDefinitionError) {
+              messaging.emit('invalidScheduleDefinition', sched)
+              ret = store.disableScheduledJob(sched, leaseOwner, result.error.message)
+            } else {
+              ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now)
+            }
+          } else {
+            ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, pasture)
+          }
+          return ret
             .catch((e) => {
               // The lease release failed.  This error isn't as important as
               // the underlying original error...

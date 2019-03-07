@@ -19,11 +19,11 @@ import {
 // TODO split this file into multiple files to make it easier to understand.
 
 
-export const SCHEDULE_CRON_MODEL = 'cron'
+export const SCHEDULE_CRON_STRATEGY = 'cron'
 
 
 export function addCronTaskCreationStrategy(registry: TaskCreationStrategyRegistry): void {
-  registry.register(SCHEDULE_CRON_MODEL, CronTaskCreationStrategy)
+  registry.register(SCHEDULE_CRON_STRATEGY, CronTaskCreationStrategy)
 }
 
 
@@ -65,7 +65,7 @@ function getScheduleDefinition(schedule: ScheduledJobModel): ScheduleCronModel {
     throw new InvalidScheduleDefinitionError(schedule.pk, defStr, `Not valid json: ${e}`)
   }
   if (!isScheduleCronModel(def)) {
-    throw new InvalidScheduleDefinitionError(schedule.pk, defStr, `Not valid schedule definition`)
+    throw new InvalidScheduleDefinitionError(schedule.pk, defStr, `Not valid "${SCHEDULE_CRON_STRATEGY}" schedule definition`)
   }
   return def
 }

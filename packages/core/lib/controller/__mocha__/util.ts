@@ -201,7 +201,7 @@ export class ProxyDataStore implements DataStore {
   getDisabledScheduledJobs(pageKey: string | null, limit: number): Promise<import("../../datastore/api").Page<ScheduledJobModel>> {
     throw new Error('unexpected call to datastore')
   }
-  disableScheduledJob(sched: ScheduledJobModel, leaseId: string): Promise<boolean> {
+  disableScheduledJob(sched: ScheduledJobModel, leaseId: string, reason?: string): Promise<boolean> {
     throw new Error('unexpected call to datastore')
   }
   deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean> {

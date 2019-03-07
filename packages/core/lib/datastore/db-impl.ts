@@ -108,10 +108,11 @@ export class DatabaseDataStore implements DataStore {
         pageResults(rows, startIndex, limit))
   }
 
-  disableScheduledJob(job: ScheduledJobModel, leaseId: LeaseIdType): Promise<boolean> {
+  disableScheduledJob(job: ScheduledJobModel, leaseId: LeaseIdType, reason?: string): Promise<boolean> {
     return this.db.scheduledJobTable
       .conditionalUpdate(job.pk, {
         pasture: true,
+        repairState: reason || null,
       }, sjOr([
         // Note: this operation could run without a lease, by checking that the state is null.
         sjEquals(SJ_UPDATE_STATE, SCHEDULE_STATE_PASTURE),

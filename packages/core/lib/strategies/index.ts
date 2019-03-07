@@ -44,6 +44,16 @@ export {
   TaskCreationStrategyAfterCreation,
   TaskCreationStrategyAfterFinish,
   TaskCreationStrategyAfterStart,
+
+  CronTaskCreationStrategy,
+  OnceTascCreationStrategy,
+  SCHEDULE_CRON_STRATEGY,
+  SCHEDULE_ONCE_STRATEGY,
+  ScheduleCronModel,
+  ScheduleOnceModel,
+  addCronTaskCreationStrategy,
+  addTaskCreationStrategy,
+  isScheduleOnceModel,
 } from './task-creation'
 export {
   CreateLeaseIdStrategy,

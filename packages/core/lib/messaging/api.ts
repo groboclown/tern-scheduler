@@ -48,6 +48,8 @@ export interface JobExecutionEvents {
 
 export interface ErrorEvents {
   generalError: (e: any) => void
+
+  invalidScheduleDefinition: (schedule: ScheduledJobModel) => void
 }
 
 /**
