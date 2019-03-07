@@ -170,10 +170,13 @@ export class TernConfiguration {
       duplicateTaskStrategyRegistry: libStrats.createStrategyRegistry(),
       retryTaskStrategyRegistry: libStrats.createStrategyRegistry(),
     }
+
+    // Add in all the default strategy registration.
     registerAlwaysRunDuplicateTaskStrategy(this.strategies.duplicateTaskStrategyRegistry)
     registerAlwaysSkipDuplicateTaskStrategy(this.strategies.duplicateTaskStrategyRegistry)
+    libStrats.registerCronTaskCreationStrategy(this.strategies.taskCreationStrategyRegistry)
+    libStrats.registerOnceTaskCreationStrategy(this.strategies.taskCreationStrategyRegistry)
 
-    // TODO register standard task creation strategies.
     let pc: libStrats.RegisterPollCallback
     if (args.registerPollCallback) {
       pc = args.registerPollCallback

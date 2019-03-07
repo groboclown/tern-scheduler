@@ -27,7 +27,7 @@ export interface ScheduleOnceModel {
 }
 
 
-export function addTaskCreationStrategy(registry: TaskCreationStrategyRegistry): void {
+export function registerOnceTaskCreationStrategy(registry: TaskCreationStrategyRegistry): void {
   registry.register(SCHEDULE_ONCE_STRATEGY, OnceTascCreationStrategy)
 }
 

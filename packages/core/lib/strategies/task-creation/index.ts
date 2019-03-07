@@ -10,7 +10,7 @@ export {
 export {
   ScheduleCronModel,
   CronTaskCreationStrategy,
-  addCronTaskCreationStrategy,
+  registerCronTaskCreationStrategy,
   SCHEDULE_CRON_STRATEGY,
   isScheduleCronModel,
 } from './cron'
@@ -20,5 +20,5 @@ export {
   SCHEDULE_ONCE_STRATEGY,
   isScheduleOnceModel,
   ScheduleOnceModel,
-  addTaskCreationStrategy,
+  registerOnceTaskCreationStrategy,
 } from './once'

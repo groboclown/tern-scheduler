@@ -22,7 +22,7 @@ import {
 export const SCHEDULE_CRON_STRATEGY = 'cron'
 
 
-export function addCronTaskCreationStrategy(registry: TaskCreationStrategyRegistry): void {
+export function registerCronTaskCreationStrategy(registry: TaskCreationStrategyRegistry): void {
   registry.register(SCHEDULE_CRON_STRATEGY, CronTaskCreationStrategy)
 }
 

@@ -51,8 +51,8 @@ export {
   SCHEDULE_ONCE_STRATEGY,
   ScheduleCronModel,
   ScheduleOnceModel,
-  addCronTaskCreationStrategy,
-  addTaskCreationStrategy,
+  registerCronTaskCreationStrategy,
+  registerOnceTaskCreationStrategy,
   isScheduleOnceModel,
 } from './task-creation'
 export {

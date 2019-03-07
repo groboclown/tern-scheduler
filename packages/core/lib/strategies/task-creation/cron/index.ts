@@ -8,5 +8,5 @@ export {
 export {
   CronTaskCreationStrategy,
   SCHEDULE_CRON_STRATEGY,
-  addCronTaskCreationStrategy,
+  registerCronTaskCreationStrategy,
 } from './strategy'
