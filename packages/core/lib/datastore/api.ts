@@ -16,10 +16,23 @@ import {
   ExecutionJobId
 } from '../executor/types'
 
+/**
+ * General data structure used by the data store for a paged response.
+ */
 export interface Page<T extends BaseModel> {
+  /**
+   * Key to use when requesting the next page.  If this is `null`, then there
+   * are no more pages of data.
+   */
   nextPageKey: string | null
+
+  /** Number of values per page. */
   pageSize: number
+
+  /** An estimate of the total number of values. */
   estimatedCount: number | null
+
+  /** This page's data. */
   page: T[]
 }
 
@@ -30,10 +43,10 @@ export interface Page<T extends BaseModel> {
  *
  * The write operations provided here are intended to be atomic.
  *
- * TODO allow for paging requests to include filters and sort.
+ * The method calls can fail with any kind of exception, but the failures
+ * should be within the returned Promise object.
  *
- * TODO most of these descriptions need to be rewritten because of the
- * lease rewrite that happened.
+ * TODO allow for paging requests to include filters and sort.
  */
 export interface DataStore {
   /**
@@ -59,22 +72,28 @@ export interface DataStore {
    */
   addScheduledJobModel(model: ScheduledJobModel, leaseId: LeaseIdType, now: Date, leaseTimeSeconds: number): Promise<void>
 
+  /**
+   * Find the scheduled job with the given primary key.  If no such value
+   * exists in the data store, then it returns `null`.
+   */
   getScheduledJob(pk: PrimaryKeyType): Promise<ScheduledJobModel | null>
 
   /**
-   * Search for expired scheduled jobs.
+   * Search for expired scheduled jobs.  Used for polling mechanisms, not
+   * for reporting, and thus does not support paging.
    *
-   * @param now
-   * @param limit
+   * @param now used as the date descriminator for determining whether a
+   *     scheduled job is expired or not.
+   * @param limit suggested maximum records returned
    */
   pollLeaseExpiredScheduledJobs(now: Date, limit: number): Promise<ScheduledJobModel[]>
 
   /**
-   * Returns scheduled jobs which are not disabled.  Intended for UI use.  The paging
-   * key is null if asking for the first page, otherwise it should be the paging
-   * key from the previous request.  The opaque key is used to accomodate potential
-   * changes to the scheduled job list between calls, so that paging through the list
-   * does not skip entries.
+   * Returns scheduled jobs which are not disabled.  Intended for UI use.  The
+   * paging key is `null` if asking for the first page, otherwise it should be
+   * the paging key from the previous request.  The opaque key is used to
+   * accomodate potential changes to the scheduled job list between calls, so
+   * that paging through the list does not skip entries.
    *
    * @param pageKey opaque indicator for the starting page to read.
    * @param limit suggested maximum records returned
@@ -98,7 +117,16 @@ export interface DataStore {
    * Scheduled jobs cannot be enabled.  If you want to enable a job, you must
    * create a new one.
    *
-   * @param job
+   * TODO this may be removed in the future in favor of using the
+   * lease release + pasture = true method.
+   *
+   * @param sched the scheduled job to disable.
+   * @param leaseId owning lease ID to disable the scheduled job.  If the
+   *     scheduled job is not owned by this lease ID, then it will not
+   *     be disabled.
+   * @param reason an optional reason for disabling the scheduled job.
+   *     for cases where the scheduler automatically disables the job,
+   *     this should include the reason for the automatic disabling.
    */
   disableScheduledJob(sched: ScheduledJobModel, leaseId: LeaseIdType, reason?: string): Promise<boolean>
 
@@ -108,25 +136,28 @@ export interface DataStore {
    *
    * This is currently broken.  There are a bunch of conditions that must meet
    * up before we can do this.  For example, should this cascade to the child
-   * tasks?
+   * tasks?  Due to these reasons, the method is not part of the API at the
+   * moment.
    *
-   * @param job
+   * @param sched
    */
   // deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean>
 
   /**
-   * Create a lease on the scheduled job.  This must obtain the lease if and only if
-   * the job not leased.  The lease is never stolen, and it doesn't matter if the
-   * job is pastured or not (trailing tasks can still need updates).
-   * Do not take the lease if it is not expired, even if the lease ID matches up.
+   * Create a lease on the scheduled job.  This must obtain the lease if and
+   * only if the scheduled job not leased.  The lease is never stolen, and it
+   * doesn't matter if the scheduled job is pastured or not (trailing tasks
+   * can still need updates).  Do not take the lease if it is not expired,
+   * even if the lease ID matches up.
    *
    * Errors are raised in the promise for:
-   * * Lease could not be obtained (some other process has the lock)
-   * * Job is not in the data store
+   * - Lease could not be obtained (some other process has the lock)
+   * - Job is not in the data store
    *
+   * @param jobPk the primary key of the scheduled job to lease.
    * @param leaseId the lease ID is a custom value per lease operation.
-   * @param now the date for right now; must be in UTC time zone; some data stores may instead
-   *  ignore this value.
+   * @param now the date for right now; must be in UTC time zone; some data
+   *     stores may choose to ignore this value.
    * @param leaseTimeSeconds: number of seconds to reserve the lease for.
    */
   leaseScheduledJob(
@@ -140,25 +171,28 @@ export interface DataStore {
 
   /**
    * Release the lease on the job and set its state to one of the given values.
+   *
    * The lease is released if and only if:
-   * * The lease ID is set to the same as the lease ID in the request.
+   * - The lease ID is set to the same as the lease ID in the request.
+   *
    * Expired leases are fine for this, because if the lease ID is not
    * different, then that means no other process stole the lease.
    *
-   * On release, the lease ID and lease expiration should be set to null values.
+   * On release, the lease ID and lease expiration should be set to `null` values.
    *
    * Errors are raised in the promise for:
-   * * The lease was stolen by another process
-   * * The job is not in the data store
+   * - The lease was stolen by another process
+   * - The job is not in the data store
    *
    * @param leaseId
+   * @pasture set to `true` to cause the scheduled job to be pastured
+   *     (disabled) when the lease is released.
    */
   releaseScheduledJobLease(leaseId: LeaseIdType, jobPk: PrimaryKeyType, pasture?: boolean): Promise<void>
 
   /**
    * Steal an expired lease.  Used by tasks that need to repair the lease state.
-   * The lease is broken if and only if its state is UPDATING or REPAIR and the
-   * lease expiration is before `now`.  The state after stealing is REPAIR.
+   * The lease is broken if and only if its current state is expired.
    *
    * @param jobPk
    * @param newLeaseId
@@ -174,7 +208,7 @@ export interface DataStore {
    * Mark the currently leased scheduled job as needing repair.  It does this by
    * setting the lease expiration to `now`, so that the scheduled job repair
    * polling mechanism can begin repairs to the scheduled job.  The scheduled
-   * job must be currently leased by the leaseID.
+   * job must be currently leased by the `leaseId`.
    *
    * @param jobPk
    * @param now
@@ -188,8 +222,8 @@ export interface DataStore {
   /**
    * Find tasks that are eligible to begin execution.  Tasks eligible for
    * execution must be:
-   * * execution time is on or before `now`
-   * * task state is `pending`
+   * - execution time is on or before `now`
+   * - task state is `pending`
    *
    * @param now the date for right now; must be in UTC time zone; some data stores may instead
    *  ignore this value.
@@ -380,3 +414,4 @@ export interface DataStore {
    */
   deleteFinishedTask(task: TaskModel): Promise<boolean>
 }
+
