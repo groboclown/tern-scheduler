@@ -1,4 +1,6 @@
 
+/* tslint:disable:no-unused-expression */
+
 import chai from 'chai'
 import sinon from 'sinon'
 
@@ -31,7 +33,7 @@ import {
   LeaseNotOwnedError,
 } from '../../errors'
 import { ScheduledJobDataModel } from '../../datastore/db-api'
-import { PrimaryKeyType } from '../../model';
+import { PrimaryKeyType } from '../../model'
 const expect = chai.expect
 const fail = chai.assert.fail
 
@@ -54,7 +56,7 @@ describe('schedule controller', () => {
     jobContext: 'job context',
     scheduleDefinition: 'xyz',
     taskCreationStrategy: 'abc',
-    retryStrategy: 'x'
+    retryStrategy: 'x',
   }
   function mkExpectedCreatedJob(args: {
     updateState: ScheduleUpdateStateType | null,
@@ -70,6 +72,7 @@ describe('schedule controller', () => {
       pk: createdPk,
       updateTaskPk: args.updateTaskPk || null,
       pasture: args.pasture === true,
+      pastureReason: null,
       previousSchedule: null,
       previousReason: null,
       repairState: null,
@@ -83,8 +86,10 @@ describe('schedule controller', () => {
         const mSpy = new MessagingSpy()
         // updateSchema returns a promise, but it it's only for API compliance, and the schema is created immediately.
         store.updateSchema()
-        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
-          .then(pk => {
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging,
+          (job) => Promise.resolve({ value: job.pk })
+        )
+          .then(() => {
             sinon.assert.notCalled(mSpy.generalError)
             expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
             expect(db.scheduledJobTable.rows[0]).to.deep.equal(mkExpectedCreatedJob({ updateState: null }))
@@ -102,7 +107,7 @@ describe('schedule controller', () => {
           throw err
         })
           .then(() => fail(`Did not throw expected error`))
-          .catch(e => {
+          .catch((e) => {
             expect(e).to.equal(err)
             expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
             const row = db.scheduledJobTable.rows[0]
@@ -127,7 +132,7 @@ describe('schedule controller', () => {
           return Promise.reject(err)
         })
           .then(() => fail(`Did not throw expected error`))
-          .catch(e => {
+          .catch((e) => {
             expect(e).to.equal(err)
             expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
             const row = db.scheduledJobTable.rows[0]
@@ -155,7 +160,7 @@ describe('schedule controller', () => {
             return { value: 1 }
           })
             .then(() => fail(`Did not throw expected error`))
-            .catch(e => {
+            .catch((e) => {
               expect(e).to.be.instanceOf(LeaseNotOwnedError)
               expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
               const row = db.scheduledJobTable.rows[0]
@@ -182,9 +187,11 @@ describe('schedule controller', () => {
         store.addScheduledJobModel = () => {
           return Promise.reject(err)
         }
-        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging,
+          (job) => Promise.resolve({ value: job.pk })
+        )
           .then(() => { fail(`did not throw error`) })
-          .catch(e => {
+          .catch((e) => {
             expect(e).to.equal(err)
             // No point in checking if it exists in the store, since we
             // mocked up what the store does.
@@ -205,9 +212,11 @@ describe('schedule controller', () => {
         store.markLeasedScheduledJobNeedsRepair = () => {
           return Promise.reject(err2)
         }
-        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging,
+          (job) => Promise.resolve({ value: job.pk })
+        )
           .then(() => { fail(`did not throw error`) })
-          .catch(e => {
+          .catch((e) => {
             // Report the original error
             expect(e).to.equal(err1)
             // But message the final error
@@ -230,33 +239,36 @@ describe('schedule controller', () => {
         const mSpy = new MessagingSpy()
         const createTaskPk = 'taskPk1'
         store.updateSchema()
-        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
-          .then(pk => {
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging,
+          (job) => Promise.resolve({ value: job.pk })
+        )
+          .then((pk) => {
             sinon.assert.notCalled(mSpy.generalError)
             expect(pk).to.equal(createdPk)
             // Force an unlock of the job
             setLockState(db, pk, null, null, null)
             return pk
           })
-          .then(pk => runUpdateInLease(store, SCHEDULE_STATE_START_TASK, pk, createTaskPk, now, leaseBehavior, mSpy.messaging, (jobB) => {
-            sinon.assert.notCalled(mSpy.generalError)
-            const job = <ScheduledJobDataModel>jobB
-            // Expect the record to be leased.
-            expect(job.pk).to.equal(pk)
-            expect(job.leaseOwner).to.equal(createOwner)
-            expect(job.updateState).to.equal(SCHEDULE_STATE_START_TASK)
-            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
-            const row = db.scheduledJobTable.rows[0]
-            expect(row.pk).to.equal(pk)
-            expect(row.leaseOwner).to.equal(createOwner)
-            expect(row.updateState).to.equal(SCHEDULE_STATE_START_TASK)
-            return Promise.resolve({ value: 'xyz' })
-          }))
-          .then(res => {
+          .then((pk) => runUpdateInLease(store, SCHEDULE_STATE_START_TASK, pk, createTaskPk, now,
+            leaseBehavior, mSpy.messaging, (jobB) => {
+              sinon.assert.notCalled(mSpy.generalError)
+              const job = jobB as ScheduledJobDataModel
+              // Expect the record to be leased.
+              expect(job.pk).to.equal(pk)
+              expect(job.leaseOwner).to.equal(createOwner)
+              expect(job.updateState).to.equal(SCHEDULE_STATE_START_TASK)
+              expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+              const row = db.scheduledJobTable.rows[0]
+              expect(row.pk).to.equal(pk)
+              expect(row.leaseOwner).to.equal(createOwner)
+              expect(row.updateState).to.equal(SCHEDULE_STATE_START_TASK)
+              return Promise.resolve({ value: 'xyz' })
+            }))
+          .then((res) => {
             expect(res).to.equal('xyz')
             // Expect the record to not be leased
             expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
-            const row = <ScheduledJobDataModel>(db.scheduledJobTable.rows[0])
+            const row = (db.scheduledJobTable.rows[0]) as ScheduledJobDataModel
             expect(row.leaseOwner).to.be.null
             expect(row.updateState).to.be.null
           })
@@ -268,27 +280,28 @@ describe('schedule controller', () => {
         const store = new DatabaseDataStore(db)
         const mSpy = new MessagingSpy()
         const owner2 = 'owner2'
-        const leaseBehavior = new ImmediateLeaseBehavior(10, [], createOwnerStrat)
-        const now = new Date()
         store.updateSchema()
-        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging, (job) => Promise.resolve({ value: job.pk }))
-          .then(pk => {
+        return createScheduledJobAlone(store, requestedJob, now, leaseBehavior, pkStrat, mSpy.messaging,
+          (job) => Promise.resolve({ value: job.pk })
+        )
+          .then((pk) => {
             sinon.assert.notCalled(mSpy.generalError)
             expect(pk).to.equal(createdPk)
             // Force an unlock of the job
             setLockState(db, pk, null, null, null)
             return pk
           })
-          .then(pk => runUpdateInLease(store, SCHEDULE_STATE_PASTURE, pk, null, now, leaseBehavior, mSpy.messaging, (job) => {
-            sinon.assert.notCalled(mSpy.generalError)
-            expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
-            // Set the real object's owner to a different one.
-            const row = <any>(<ScheduledJobModel>(db.scheduledJobTable.rows[0]))
-            row.leaseOwner = owner2
-            return Promise.resolve({ value: 1 })
-          }))
-          .then(res => { fail(`should have failed with not lease owner`) })
-          .catch(e => {
+          .then((pk) => runUpdateInLease(store, SCHEDULE_STATE_PASTURE, pk, null, now,
+            leaseBehavior, mSpy.messaging, () => {
+              sinon.assert.notCalled(mSpy.generalError)
+              expect(db.scheduledJobTable.rows).to.have.lengthOf(1)
+              // Set the real object's owner to a different one.
+              const row = (db.scheduledJobTable.rows[0] as ScheduledJobModel) as any
+              row.leaseOwner = owner2
+              return Promise.resolve({ value: 1 })
+            }))
+          .then(() => { fail(`should have failed with not lease owner`) })
+          .catch((e) => {
             sinon.assert.notCalled(mSpy.generalError)
             expect(e).to.be.instanceOf(LeaseNotOwnedError)
             // Swtich to a success!

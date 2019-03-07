@@ -73,14 +73,16 @@ export interface LeaseBehavior {
 
 
 export interface LeaseExitStateValue<T> {
-  value: T,
+  value: T
   pasture?: boolean
+  pastureReason?: string
 }
 
 
 export interface LeaseExitStateError {
-  error: any,
+  error: any
   pasture?: boolean
+  pastureReason?: string
 }
 
 export type LeaseExitState<T> = LeaseExitStateValue<T> | LeaseExitStateError
@@ -124,6 +126,7 @@ export function createScheduledJobAlone<T>(
     ...scheduledJob,
     updateState: SCHEDULE_STATE_ADD_TASK,
     pasture: false,
+    pastureReason: null,
     createdOn: now,
     pk: schedPk,
     updateTaskPk: createdTaskPk,
@@ -167,7 +170,7 @@ export function createScheduledJobAlone<T>(
       // mark should fail too.
       logDebug('createScheduledJobAlone', 'Failed inside lease adding scheduled job and running withLease', e)
       return store
-        .markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now)
+        .markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now, false, null)
         .catch((e2) => {
           // Lease release failed.  It's not as important as the inner error,
           // so report it and rethrow the inner error.
@@ -181,18 +184,21 @@ export function createScheduledJobAlone<T>(
       // There are two potential error states here: the schedule definition was
       // in a bad state, or some other internal issue.  Bad schedule definitions
       // are a user error and lead to an immediate disabled state.
-      const pasture = result.pasture
       // logDebug('createScheduledJobAlone', `Completed execution: repair? ${needsRepair}, pasture? ${pasture}`)
       let ret: Promise<any>
       if (isLeaseExitStateError(result)) {
         if (result.error instanceof InvalidScheduleDefinitionError) {
           messaging.emit('invalidScheduleDefinition', sched)
-          ret = store.disableScheduledJob(sched, leaseOwner, result.error.message)
+          ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, true, result.error.message)
         } else {
-          ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now)
+          ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now,
+            result.pasture || false,
+            result.pasture ? (result.pastureReason || null) : null)
         }
       } else {
-        ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, pasture)
+        ret = store.releaseScheduledJobLease(leaseOwner, sched.pk,
+          result.pasture || false,
+          result.pasture ? (result.pastureReason || null) : null)
       }
       return ret
         .catch((e) => {
@@ -283,17 +289,20 @@ export function runUpdateInLease<T>(
 
         // With successful update behavior, release the lease and return the result.
         .then((result) => {
-          const pasture = result.pasture
           let ret: Promise<any>
           if (isLeaseExitStateError(result)) {
             if (result.error instanceof InvalidScheduleDefinitionError) {
               messaging.emit('invalidScheduleDefinition', sched)
-              ret = store.disableScheduledJob(sched, leaseOwner, result.error.message)
+              ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, true, result.error.message)
             } else {
-              ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now)
+              ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now,
+                result.pasture || false,
+                result.pasture ? (result.pastureReason || null) : null)
             }
           } else {
-            ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, pasture)
+            ret = store.releaseScheduledJobLease(leaseOwner, sched.pk,
+              result.pasture || false,
+              result.pasture ? (result.pastureReason || null) : null)
           }
           return ret
             .catch((e) => {

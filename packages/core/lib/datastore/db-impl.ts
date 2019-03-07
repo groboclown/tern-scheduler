@@ -14,7 +14,6 @@ import {
 } from '../model'
 import {
   SCHEDULE_STATE_REPAIR,
-  SCHEDULE_STATE_PASTURE,
   ScheduleUpdateStateType,
 } from '../model/schedule'
 import {
@@ -108,40 +107,6 @@ export class DatabaseDataStore implements DataStore {
         pageResults(rows, startIndex, limit))
   }
 
-  disableScheduledJob(job: ScheduledJobModel, leaseId: LeaseIdType, reason?: string): Promise<boolean> {
-    return this.db.scheduledJobTable
-      .conditionalUpdate(job.pk, {
-        pasture: true,
-        repairState: reason || null,
-      }, sjOr([
-        // Note: this operation could run without a lease, by checking that the state is null.
-        sjEquals(SJ_UPDATE_STATE, SCHEDULE_STATE_PASTURE),
-        sjEquals(SJ_LEASE_OWNER, leaseId),
-        sjEquals(SJ_PASTURE, false),
-      ]))
-      .then((updateCount) => {
-        if (updateCount > 0) {
-          return Promise.resolve(true)
-        }
-
-        // Failure triggers can cause the query to not look right if someone steals
-        // the state between the initial conditional update and this query.
-        return this.db.scheduledJobTable
-          .find(0, 1,
-            sjEquals(MODEL_PRIMARY_KEY, job.pk))
-          .then((jobs) => {
-            if (jobs.length > 0) {
-              if (jobs[0].pasture) {
-                return Promise.resolve(false)
-              }
-              return Promise.reject(new LeaseNotOwnedError(leaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
-            } else {
-              return Promise.reject(new ScheduledJobNotFoundError(job.pk))
-            }
-          })
-      })
-  }
-
   deleteScheduledJob(job: ScheduledJobModel): Promise<boolean> {
     // FIXME this needs more checks, to FIRST ensure it's out to pasture and not leased
     // (so that it can't change later; if it was leased, it might change to repair),
@@ -230,7 +195,8 @@ export class DatabaseDataStore implements DataStore {
   releaseScheduledJobLease(
     leaseId: string,
     jobPk: PrimaryKeyType,
-    pasture?: boolean
+    pasture: boolean,
+    pastureReason: string | null
   ): Promise<void> {
     let updates: Partial<database.ScheduledJobDataModel>
     // Passing "undefined" in the partial value means that the key is still
@@ -242,6 +208,7 @@ export class DatabaseDataStore implements DataStore {
         leaseOwner: null,
         leaseExpires: null,
         pasture,
+        pastureReason,
       }
     } else {
       updates = {
@@ -317,10 +284,18 @@ export class DatabaseDataStore implements DataStore {
   }
 
 
-  markLeasedScheduledJobNeedsRepair(jobPk: PrimaryKeyType, leaseId: LeaseIdType, now: Date): Promise<void> {
+  markLeasedScheduledJobNeedsRepair(
+    jobPk: PrimaryKeyType,
+    leaseId: LeaseIdType,
+    now: Date,
+    pasture: boolean,
+    pastureReason: string | null
+  ): Promise<void> {
     return this.db.scheduledJobTable
       .conditionalUpdate(jobPk, {
         leaseExpires: now,
+        pasture,
+        pastureReason,
       }, sjAnd([
         sjNotNull(SJ_UPDATE_STATE),
         sjEquals(SJ_LEASE_OWNER, leaseId),
@@ -597,12 +572,6 @@ function sjAnd(
   conditionals: Array<database.Conditional<database.ScheduledJobDataModel>>
 ): database.AndConditional<database.ScheduledJobDataModel> {
   return new database.AndConditional<database.ScheduledJobDataModel>(conditionals)
-}
-
-function sjOr(
-  conditionals: Array<database.Conditional<database.ScheduledJobDataModel>>
-): database.OrConditional<database.ScheduledJobDataModel> {
-  return new database.OrConditional<database.ScheduledJobDataModel>(conditionals)
 }
 
 function sjEquals<K extends keyof database.ScheduledJobDataModel>(

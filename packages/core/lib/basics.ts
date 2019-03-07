@@ -222,13 +222,13 @@ export class TernClient {
   /**
    * Disable an active scheduled job.
    *
-   * @param configuration
    * @param scheduledJob
    */
-  disableScheduledJob(scheduledJob: ScheduledJobModel): Promise<void> {
+  disableScheduledJob(scheduledJob: ScheduledJobModel, reason: string | null): Promise<void> {
     return disableScheduleCore(
       this.configuration.store,
       scheduledJob,
+      reason,
       this.configuration.strategies.currentTimeUTCStrategy(),
       this.configuration.leaseBehavior,
       this.configuration.messaging

@@ -53,6 +53,11 @@ export class ScheduledJob extends Model<ScheduledJob> implements datastore.db.Sc
 
   @Column({
     type: DataType.STRING(256),
+  })
+  pastureReason!: string | null
+
+  @Column({
+    type: DataType.STRING(256),
     allowNull: false,
   })
   displayName!: string

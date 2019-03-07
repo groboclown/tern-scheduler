@@ -54,6 +54,8 @@ export interface ScheduledJobModel extends BaseModel {
    */
   readonly pasture: boolean
 
+  readonly pastureReason: string | null
+
   readonly displayName: string
   readonly description: string
   readonly createdOn: Date

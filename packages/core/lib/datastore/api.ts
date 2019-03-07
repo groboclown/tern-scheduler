@@ -109,28 +109,6 @@ export interface DataStore {
   getDisabledScheduledJobs(pageKey: string | null, limit: number): Promise<Page<ScheduledJobModel>>
 
   /**
-   * Attempts to disable the job.  If the job is already disabled, then this
-   * returns a false value.  If the job could not be locked before disabling,
-   * or if it is not in the data store, then an error is sent to the
-   * promise's reject.  This operation requires a lease.
-   *
-   * Scheduled jobs cannot be enabled.  If you want to enable a job, you must
-   * create a new one.
-   *
-   * TODO this may be removed in the future in favor of using the
-   * lease release + pasture = true method.
-   *
-   * @param sched the scheduled job to disable.
-   * @param leaseId owning lease ID to disable the scheduled job.  If the
-   *     scheduled job is not owned by this lease ID, then it will not
-   *     be disabled.
-   * @param reason an optional reason for disabling the scheduled job.
-   *     for cases where the scheduler automatically disables the job,
-   *     this should include the reason for the automatic disabling.
-   */
-  disableScheduledJob(sched: ScheduledJobModel, leaseId: LeaseIdType, reason?: string): Promise<boolean>
-
-  /**
    * Attempts to delete the job only if it is disabled.  If the job is not in
    * the data store, or not disabled, then this returns a false value.
    *
@@ -188,7 +166,12 @@ export interface DataStore {
    * @pasture set to `true` to cause the scheduled job to be pastured
    *     (disabled) when the lease is released.
    */
-  releaseScheduledJobLease(leaseId: LeaseIdType, jobPk: PrimaryKeyType, pasture?: boolean): Promise<void>
+  releaseScheduledJobLease(
+    leaseId: LeaseIdType,
+    jobPk: PrimaryKeyType,
+    pasture: boolean,
+    pastureReason: string | null
+  ): Promise<void>
 
   /**
    * Steal an expired lease.  Used by tasks that need to repair the lease state.
@@ -213,7 +196,13 @@ export interface DataStore {
    * @param jobPk
    * @param now
    */
-  markLeasedScheduledJobNeedsRepair(jobPk: PrimaryKeyType, leaseId: LeaseIdType, now: Date): Promise<void>
+  markLeasedScheduledJobNeedsRepair(
+    jobPk: PrimaryKeyType,
+    leaseId: LeaseIdType,
+    now: Date,
+    pasture: boolean,
+    pastureReason: string | null
+  ): Promise<void>
 
 
   // ------------------------------------------------------------------------

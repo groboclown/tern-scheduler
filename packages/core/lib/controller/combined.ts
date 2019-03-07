@@ -338,13 +338,15 @@ export function taskFinished(
 export function disableSchedule(
   store: DataStore,
   schedule: ScheduledJobModel,
+  reason: string | null,
   now: Date,
   leaseBehavior: LeaseBehavior,
   messaging: MessagingEventEmitter
 ): Promise<void> {
-  return runUpdateInLease(store, SCHEDULE_STATE_PASTURE, schedule.pk, null, now, leaseBehavior, messaging, () => {
-    return { value: null, pasture: true }
-  })
+  return runUpdateInLease(store, SCHEDULE_STATE_PASTURE, schedule.pk, null, now, leaseBehavior, messaging,
+    (): LeaseExitStateValue<null> => {
+      return { value: null, pasture: true, pastureReason: reason || undefined }
+    })
     // Ensure we return void
     .then(() => { })
 }
