@@ -9,4 +9,11 @@ The Data Store part of Tern allows for you to use whatever underlying technology
 
 Things like persistence and high availability are left as requirements for the end user, and are not necessary for the scheduler (but are nice to have).
 
-Attempts have been made to create a static schema for the [data model](../model), to make SQL-based solutions easy.
+## Custom Implementation of the API
+
+To create a custom provider for the data store API, you need to create a class that implements the [DataStore API](api.ts) class.
+
+All date values will be passed to the API as UTC timezone (regardless of what the JavaScript `Date` object may say), and they must be similarly returned in UTC.
+
+The implementation is free to add whatever indices, primary keys, and other columns to make it work as needed, but the passed-in "primary key" values must be respected and retrieved.
+

@@ -164,7 +164,7 @@ Examples of some implementations that may become standardized:
 
 Tern can use a message pipeline to make its execution more efficient, but it's not necessary.  However, inside the service, all major events that are triggered by the job execution tool or polling or some other mechanism are passed through a standard Node event emitter object.
 
-If you hook the
+You should reference the [messaging guidelines](packages/core/lib/messaging) to hook your own messaging into it.
 
 
 ### Choosing Strategies
@@ -191,7 +191,7 @@ The library must create globally unique IDs per attempt to obtain a lease on a s
 
 #### Lease Time
 
-The time to allow for each lease operation to run.  If the operation with the lease takes longer than this, then the scheduled job is considered "expired" and must be repaired.  The lease time helps mitigate problems with [partial failure](https://en.wikipedia.org/wiki/Fault_tolerance)![extern](./site/img/extern.svg)
+The time to allow for each lease operation to run.  If the operation with the lease takes longer than this, then the scheduled job is considered "expired" and must be repaired.  The lease time helps mitigate problems with [partial failure](https://en.wikipedia.org/wiki/Fault_tolerance)![extern](site/img/extern.svg)
 
 #### Poll Wait Time
 

@@ -184,18 +184,24 @@ export function createScheduledJobAlone<T>(
       // There are two potential error states here: the schedule definition was
       // in a bad state, or some other internal issue.  Bad schedule definitions
       // are a user error and lead to an immediate disabled state.
-      // logDebug('createScheduledJobAlone', `Completed execution: repair? ${needsRepair}, pasture? ${pasture}`)
       let ret: Promise<any>
       if (isLeaseExitStateError(result)) {
         if (result.error instanceof InvalidScheduleDefinitionError) {
           messaging.emit('invalidScheduleDefinition', sched)
+          messaging.emit('scheduledJobDisabled', sched)
           ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, true, result.error.message)
         } else {
+          if (result.pasture) {
+            messaging.emit('scheduledJobDisabled', sched)
+          }
           ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now,
             result.pasture || false,
             result.pasture ? (result.pastureReason || null) : null)
         }
       } else {
+        if (result.pasture) {
+          messaging.emit('scheduledJobDisabled', sched)
+        }
         ret = store.releaseScheduledJobLease(leaseOwner, sched.pk,
           result.pasture || false,
           result.pasture ? (result.pastureReason || null) : null)
@@ -290,16 +296,25 @@ export function runUpdateInLease<T>(
         // With successful update behavior, release the lease and return the result.
         .then((result) => {
           let ret: Promise<any>
+          // TODO these messaging emitters may need to update the schedule object to include
+          // the status change.
           if (isLeaseExitStateError(result)) {
             if (result.error instanceof InvalidScheduleDefinitionError) {
               messaging.emit('invalidScheduleDefinition', sched)
+              messaging.emit('scheduledJobDisabled', sched)
               ret = store.releaseScheduledJobLease(leaseOwner, sched.pk, true, result.error.message)
             } else {
+              if (result.pasture) {
+                messaging.emit('scheduledJobDisabled', sched)
+              }
               ret = store.markLeasedScheduledJobNeedsRepair(sched.pk, leaseOwner, now,
                 result.pasture || false,
                 result.pasture ? (result.pastureReason || null) : null)
             }
           } else {
+            if (result.pasture) {
+              messaging.emit('scheduledJobDisabled', sched)
+            }
             ret = store.releaseScheduledJobLease(leaseOwner, sched.pk,
               result.pasture || false,
               result.pasture ? (result.pastureReason || null) : null)
