@@ -82,6 +82,7 @@ export namespace strategies {
   export const addUUIDCreateLeaseIdStrategy = libStrats.addUUIDCreateLeaseIdStrategy
   export const registerStandardTimeStrategy = libStrats.registerStandardTimeStrategy
   export const addUUIDCreatePrimaryKeyStrategy = libStrats.addUUIDCreatePrimaryKeyStrategy
+  export const cronToDefinition = libStrats.cronToDefinition
 }
 
 export namespace datastore {

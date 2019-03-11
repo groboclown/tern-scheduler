@@ -2,12 +2,22 @@
   "name": "@tern-scheduler/datastore-sql",
   "version": "0.0.1",
   "description": "Generic SQL datastore back end for the Tern Scheduler",
-  "main": "index.js",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "files": [
+    "lib",
+    "src"
+  ],
+  "directories": {
+    "lib": "lib",
+    "src": "src",
+    "tests": "__mocha__"
+  },
   "scripts": {
     "build": "node_modules/.bin/tsc && npm run lint",
     "test-base": "node_modules/.bin/mocha",
     "test": "node_modules/.bin/nyc mocha",
-    "lint": "node_modules/.bin/tslint -e \"./lib/**/__mocha__/*.ts\" index.ts \"./lib/**/*.ts\""
+    "lint": "node_modules/.bin/tslint \"./src/**/*.ts\""
   },
   "keywords": [
     "scheduler",
@@ -23,13 +33,6 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  },
-  "files": [
-    "dist"
-  ],
-  "directories": {
-    "lib": "dist",
-    "tests": "__tests__"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",

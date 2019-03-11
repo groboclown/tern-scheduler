@@ -11,6 +11,7 @@
         "strict": true,
         "esModuleInterop": true,
         "noUnusedLocals": true,
-        "declaration": true
+        "declaration": true,
+        "experimentalDecorators": true
     }
 }

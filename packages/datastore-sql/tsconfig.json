@@ -1,16 +1,15 @@
 {
     "extends": "../../tsconfig.json",
     "include": [
-        "./lib/**/*",
-        "./index.ts"
+        "src"
     ],
     "compilerOptions": {
-      "experimentalDecorators": true,
-      "emitDecoratorMetadata": true,
-      "outDir": "./dist"
+        "outDir": "./lib",
+        "rootDir": "./src",
+        "composite": true
     },
     "exclude": [
         "node_modules",
-        "__mocha__"
+        "lib"
     ]
 }

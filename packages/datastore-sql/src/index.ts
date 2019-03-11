@@ -1,4 +1,4 @@
-import { Sequelize, ICreateOptions, IFindOptions } from 'sequelize-typescript'
+import { Sequelize, ISequelizeConfig, ICreateOptions, IFindOptions } from 'sequelize-typescript'
 import { UpdateOptions, DestroyOptions } from 'sequelize'
 // Sequelize compatiblity
 import * as BluebirdPromise from 'bluebird'
@@ -18,10 +18,16 @@ const DatabaseDataStore = datastore.DatabaseDataStore
 
 
 export function createSqlDataStore(
-  sequelize: Sequelize,
+  sequelize: Sequelize | ISequelizeConfig,
   logger?: (sql: string, timeMillis?: number) => void
 ): DataStore {
-  return new DatabaseDataStore(new SqlDatabase(sequelize, logger))
+  let sq: Sequelize
+  if (sequelize instanceof Sequelize) {
+    sq = sequelize
+  } else {
+    sq = new Sequelize(sequelize)
+  }
+  return new DatabaseDataStore(new SqlDatabase(sq, logger))
 }
 
 

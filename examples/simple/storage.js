@@ -1,12 +1,13 @@
 
-const tern = require('../packages/core');
-const ternSql = require('../packages/datastore-sql');
+const tern = require('@tern-scheduler/core');
+const ternSql = require('@tern-scheduler/datastore-sql');
+const Sequelize = require('sequelize');
 
 
 // Determine which datastore provider to use, based on the
 // environment variables.
 
-exports.settings = (() => {
+exports.datastore = (() => {
   const dbProviderSettings = {};
   (process.env.TERN_DB || 'db=memory').split(';')
     .forEach(v => {
@@ -15,39 +16,41 @@ exports.settings = (() => {
     });
 
   switch (dbProviderSettings.db) {
+    case 'memory':
+      return tern.createMemoryDataStore();
     case 'sqlite':
-      return {
+      return ternSql.createSqlDataStore({
         dialect: 'sqlite',
         file: dbProviderSettings.file || ':memory:',
-      };
+      });
     case 'mysql':
-      return {
+      return ternSql.createSqlDataStore({
         database: dbProviderSettings.name,
         username: dbProviderSettings.user,
         password: dbProviderSettings.password,
         host: dbProviderSettings.host || 'localhost',
         port: Number(dbProviderSettings.port || '3306'),
         dialect: 'mysql',
-      };
+      });
     case 'postgres':
     case 'postgresql':
-      return {
+      return ternSql.createSqlDataStore({
         database: dbProviderSettings.name,
         username: dbProviderSettings.user,
         password: dbProviderSettings.password,
         host: dbProviderSettings.host || 'localhost',
         port: Number(dbProviderSettings.port || '5432'),
         dialect: 'postgres',
-      };
+      });
     case 'mssql':
-      return {
+      return ternSql.createSqlDataStore({
         database: dbProviderSettings.name,
         username: dbProviderSettings.user,
         password: dbProviderSettings.password,
         host: dbProviderSettings.host || 'localhost',
         port: Number(dbProviderSettings.port || '1433'),
         dialect: 'mssql',
-      };
+      });
     case undefined:
     case null:
       throw new Error('Must define the DB provider type with the `TERN_DB` ENV value including "db=(provider)" value');

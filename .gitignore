@@ -8,6 +8,7 @@ lerna-debug.log
 
 # TSC stuff
 dist/
+lib/
 
 # IDE stuff
 .vscode/
