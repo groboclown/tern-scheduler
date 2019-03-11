@@ -58,19 +58,19 @@
       "ts-node/register"
     ],
     "spec": [
-      "./src/**/__mocha__/*.tests.ts"
+      "src/**/__mocha__/*.tests.ts"
     ],
     "full-trace": true
   },
   "nyc": {
     "include": [
-      "./src/**/*.ts"
+      "src/**/*.ts"
     ],
     "extension": [
       ".ts"
     ],
     "exclude": [
-      "./src/**/__mocha__/*.ts"
+      "src/**/__mocha__/*.ts"
     ],
     "reporter": [
       "text-summary",

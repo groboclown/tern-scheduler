@@ -41,11 +41,12 @@
     "@types/sinon": "^7.0.6",
     "chai": "^4.2.0",
     "mocha": "^6.0.1",
-    "mysql": "^2.16.0",
+    "mysql2": "^1.6.5",
     "nyc": "^13.3.0",
-    "pg": "^7.8.1",
+    "pg": "^7.8.2",
+    "pg-hstore": "^2.3.2",
     "sinon": "^7.2.4",
-    "sqlite": "^3.0.2",
+    "sqlite3": "^4.0.6",
     "tedious": "^5.0.3",
     "ts-node": "^8.0.2",
     "tslint": "^5.13.1",
@@ -62,20 +63,20 @@
       "ts-node/register"
     ],
     "spec": [
-      "./src/**/__mocha__/*.tests.ts"
+      "src/**/__mocha__/*.tests.ts"
     ],
     "full-trace": true,
     "bail": true
   },
   "nyc": {
     "include": [
-      "./src/**/*.ts"
+      "src/**/*.ts"
     ],
     "extension": [
       ".ts"
     ],
     "exclude": [
-      "./src/**/__mocha__/*.ts"
+      "src/**/__mocha__/*.ts"
     ],
     "reporter": [
       "text-summary",
