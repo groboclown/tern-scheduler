@@ -24,7 +24,7 @@ describe('MySql compatibility', () => {
     password: mysqlPasswd,
     host: mysqlHost,
     port: Number(mysqlPort),
-    dialect: 'sqlite',
+    dialect: 'mysql',
   })
 
   standardDataStoreTests(sequelize)

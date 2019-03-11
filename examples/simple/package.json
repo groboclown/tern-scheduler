@@ -1,0 +1,29 @@
+{
+  "name": "@tern-scheduler/example",
+  "version": "0.0.1",
+  "description": "Example usaage of the Tern Scheduler",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "scheduler",
+    "node",
+    "nodejs"
+  ],
+  "author": "Groboclown",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/groboclown/tern-scheduler.git",
+    "directory": "example"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@tern-scheduler/core": "^0.0.1",
+    "@tern-scheduler/datastore-sql": "^0.0.1",
+    "sequelize": "^4.42.1"
+  }
+}

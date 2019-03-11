@@ -25,6 +25,13 @@
   "publishConfig": {
     "access": "public"
   },
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "lib": "dist",
+    "tests": "__tests__"
+  },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.6",

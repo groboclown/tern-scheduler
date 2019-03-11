@@ -32,6 +32,9 @@ import {
   registerAlwaysSkipDuplicateTaskStrategy
 } from './strategies/duplicate-task'
 import {
+  registerNoRetryTaskStrategy,
+} from './strategies/retry'
+import {
   LeaseBehavior,
   NewScheduledJob,
   createScheduledJob as createScheduledJobCore,
@@ -176,6 +179,7 @@ export class TernConfiguration {
     registerAlwaysSkipDuplicateTaskStrategy(this.strategies.duplicateTaskStrategyRegistry)
     libStrats.registerCronTaskCreationStrategy(this.strategies.taskCreationStrategyRegistry)
     libStrats.registerOnceTaskCreationStrategy(this.strategies.taskCreationStrategyRegistry)
+    registerNoRetryTaskStrategy(this.strategies.retryTaskStrategyRegistry)
 
     let pc: libStrats.RegisterPollCallback
     if (args.registerPollCallback) {

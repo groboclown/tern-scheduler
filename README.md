@@ -62,7 +62,7 @@ const config = new TernConfiguration({
   // You can provide the time to allow the combined effort for
   // the datastore access + the job execution framework to fire a job.
   // Default is 300 seconds (5 minutes).
-  leaseTimeSeconds: 10
+  leaseTimeSeconds: 10,
 
   // The background polling activity monitor and runner.
   pollingCallback

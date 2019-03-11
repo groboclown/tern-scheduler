@@ -20,3 +20,10 @@ export type RetryTaskStrategy =
 export interface RetryTaskStrategyRegistry extends StrategyRegistry<RetryTaskStrategy> {
 
 }
+
+
+export const NO_RETRY_TASK_NAME = 'none'
+
+export function registerNoRetryTaskStrategy(reg: RetryTaskStrategyRegistry): void {
+  reg.register(NO_RETRY_TASK_NAME, () => null)
+}
