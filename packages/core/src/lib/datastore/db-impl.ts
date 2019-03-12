@@ -502,12 +502,12 @@ export class DatabaseDataStore implements DataStore {
   ): Promise<void> {
     const extraData = extra || {}
     return this.db.taskTable
-      .conditionalUpdate(pk, {
-        ...extraData,
-        state: newState,
-      }, tkAnd([
-        tkEquals(TK_STATE, expectedCurrentState),
-      ]))
+      .conditionalUpdate(
+        pk, {
+          ...extraData,
+          state: newState,
+        },
+        tkEquals(TK_STATE, expectedCurrentState))
       .then((count) => {
         if (count > 0) {
           return Promise.resolve()
@@ -601,11 +601,13 @@ function sjNull(
 }
 
 
+/*
 function tkAnd(
   conditionals: Array<database.Conditional<database.TaskDataModel>>
 ): database.AndConditional<database.TaskDataModel> {
   return new database.AndConditional<database.TaskDataModel>(conditionals)
 }
+*/
 
 function tkEquals<K extends keyof database.TaskDataModel>(
   key: K,

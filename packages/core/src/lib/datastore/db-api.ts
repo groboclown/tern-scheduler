@@ -86,14 +86,14 @@ export function isOneOfConditional<T extends DataModel, K extends keyof T>(
 }
 
 export class NullConditional<T extends DataModel> implements Conditional<T> {
-  readonly type = 'null'
+  readonly type = 'is-null'
   constructor(
     public readonly key: keyof T
   ) { }
 }
 
 export function isNullConditional<T extends DataModel>(v: Conditional<T> | undefined | null): v is NullConditional<T> {
-  return (!!v) && v.type === 'null'
+  return (!!v) && v.type === 'is-null'
 }
 
 export class NotNullConditional<T extends DataModel> implements Conditional<T> {

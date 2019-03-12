@@ -31,9 +31,12 @@ describe('primary-key', () => {
         const r = reg.get(UUID_PK_STRAT_NAME)
         expect(r).not.to.be.null
         expect(r).not.to.be.undefined
-        const v = r()
+        const v1 = r()
         // Example: cd8f5f9f-e3e8-569f-87ef-f03c6cfc29bc
-        expect(v).to.match(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/)
+        expect(v1).to.match(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/)
+
+        const v2 = r()
+        expect(v1).to.not.equal(v2)
       })
     })
   })

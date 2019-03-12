@@ -1,20 +1,18 @@
 
-import uuid5 from 'uuid/v5'
+import {
+  UUIDConfig as UUIDConfigSrc,
+  createUUIDProvider,
+} from '../../internal/uuid'
 import {
   CreatePrimaryKeyStrategy,
   CreatePrimaryKeyStrategyRegistry,
 } from './api'
-import {
-  PrimaryKeyType,
-} from '../../model'
 
-export const UUIDConfig = {
+export const UUIDConfig: UUIDConfigSrc = {
   hostname: process.env.HOSTNAME || 'localhost',
 }
 
-export const UUIDCreatePrimaryKeyStrategy: CreatePrimaryKeyStrategy = (): PrimaryKeyType => {
-  return uuid5(UUIDConfig.hostname, uuid5.DNS)
-}
+export const UUIDCreatePrimaryKeyStrategy: CreatePrimaryKeyStrategy = createUUIDProvider(UUIDConfig)
 
 export const UUID_PK_STRAT_NAME = 'uuid'
 

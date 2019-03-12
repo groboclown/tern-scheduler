@@ -47,7 +47,7 @@ export class Task extends Model<Task> implements datastore.db.TaskDataModel {
   executeAt!: Date
 
   @Column({
-    type: DataType.DATE,
+    type: DataType.STRING(128),
   })
   executionJobId!: string | null
 

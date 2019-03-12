@@ -3,8 +3,6 @@
 const tern = require('@tern-scheduler/core');
 const storage = require('./storage');
 
-const util = require('util');
-
 // Set up the scheduler configuration.
 // It uses a SQL database.  The setup requires setting the environment
 // variable `TERN_DB` with semicolon separated key=value pairs.
@@ -37,7 +35,7 @@ const config = new tern.TernConfiguration({
 
   // Defines how long to wait to retry if a lease is owned by another
   // process, and also how many times to retry.
-  retryLeaseTimeStrategy: () => 5,
+  retryLeaseTimeStrategy: () => [5],
 
   // You can provide the time to allow the combined effort for
   // the datastore access + the job execution framework to fire a job.
@@ -70,18 +68,18 @@ config.store.updateSchema()
           description: 'Fire on the 30 second mark of every minute',
           jobName: 'log',
           jobContext: 'The once every 30 seconds job.',
-  
+
           // Use the built-in duplicate strategy "skip", which returns "skip"
           // every time a task is asked to start when it is already running,
           // which means we will only have at most 1 instance of any task
           // running at the same time.
           duplicateStrategy: 'skip',
-  
+
           // Use the built-in retry strategy "none", which returns null
           // every time a failed task is asked to run again, which
           // means that all failed tasks will never retry their execution.
           retryStrategy: 'none',
-  
+
           // Use the built-in "cron" scheduling strategy.
           taskCreationStrategy: 'cron',
           scheduleDefinition: JSON.stringify(tern.strategies.cronToDefinition('30 * * * * *')),
@@ -104,7 +102,7 @@ config.store.updateSchema()
     .then(() => {
       console.log(`Completed setup of scheduled jobs`);
     }),
-    
+
 
     new Promise((resolve) => {
       const scheduler = new tern.TernScheduler(config,
@@ -114,17 +112,21 @@ config.store.updateSchema()
           startJob: (taskId, jobName, context) => {
             // Perform the execution entirely in-process.
             return new Promise((resolve, reject) => {
-              console.log(`Ran task ${taskId}: ${context}`);
-              if (this._messaging) {
-                this._messaging.emit('jobExecutionFinished',
-                  // Job Execution ID, which we set to the task ID.
-                  taskId,
-                  // Finish state.
-                  {
-                    state: 'completed',
-                    result: 'success',
-                  });
-              }
+              // Needs to run later...
+              // FIXME the scheduler should handle the task running right away.
+              setTimeout(() => {
+                console.log(`Ran task ${taskId}: ${context}`);
+                if (this._messaging) {
+                  this._messaging.emit('jobExecutionFinished',
+                    // Job Execution ID, which we set to the task ID.
+                    taskId,
+                    // Finish state.
+                    {
+                      state: 'completed',
+                      result: 'success',
+                    });
+                }
+              }, 500);
               // Use the task ID as the job execution ID.
               resolve(taskId);
             });
@@ -132,7 +134,7 @@ config.store.updateSchema()
           withMessaging: (messaging) => {
             this._messaging = messaging;
           },
-      
+
           // Internal stuff
           _messaging: null,
         });
@@ -143,7 +145,7 @@ config.store.updateSchema()
       scheduler.pollTaskReadyToExecute();
       scheduler.pollLongQueuedTasks(10);
       scheduler.pollLongExecutingTasks(10);
-      
+
       resolve();
     }),
 

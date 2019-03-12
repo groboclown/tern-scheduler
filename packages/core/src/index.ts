@@ -132,8 +132,8 @@ export namespace datastore {
     export type NotNullConditional<T extends DataModel> = libDbApi.NotNullConditional<T>
     export const NotNullConditional = libDbApi.NotNullConditional
     export const isNotNullConditional = libDbApi.isNotNullConditional
-    export type NullConditional<T extends DataModel> = libDbApi.NotNullConditional<T>
-    export const NullConditional = libDbApi.NotNullConditional
-    export const isNullConditional = libDbApi.isNotNullConditional
+    export type NullConditional<T extends DataModel> = libDbApi.NullConditional<T>
+    export const NullConditional = libDbApi.NullConditional
+    export const isNullConditional = libDbApi.isNullConditional
   }
 }
