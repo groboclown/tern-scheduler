@@ -3,6 +3,7 @@
 const tern = require('@tern-scheduler/core');
 const storage = require('./storage');
 
+// --------------------------------------------------------------------------
 // Set up the scheduler configuration.
 // It uses a SQL database.  The setup requires setting the environment
 // variable `TERN_DB` with semicolon separated key=value pairs.
@@ -48,88 +49,45 @@ const config = new tern.TernConfiguration({
 
 const client = new tern.TernClient(config);
 
+
+// --------------------------------------------------------------------------
+// Database Setup
 // Schema must exist before anything else can run.
 config.store.updateSchema()
   .then(() => Promise.all([
 
-  // Use the client to idempotently setup the 2 schedules.
-  // We'll have one schedule fire on the 30 second mark of every minute, and one
-  // to fire once every two minutes.
-  // This runs in a promise, but can run independent of the rest of the startup;
-  config.store.updateSchema()
-    .then(() => client.getActiveScheduledJobs(null, 100))
-    .then(sjPage => {
-      // Just inspect the first page's results.
-      const ret = [];
-      const names = sjPage.page.map(sj => sj.displayName);
-      if (names.indexOf('30 seconds') < 0) {
-        ret.push(client.createScheduledJob({
-          displayName: '30 seconds',
-          description: 'Fire on the 30 second mark of every minute',
-          jobName: 'log',
-          jobContext: 'The once every 30 seconds job.',
+    // ----------------------------------------------------------------------
+    // Use the client to idempotently setup the schedules.
+    // This runs in a promise, and must run after the schema is
+    // udpated, but can run independent of the scheduler startup.
+    config.store.updateSchema()
+      .then(() => client.getActiveScheduledJobs(null, 100))
+      .then(sjPage => {
+        // Just inspect the first page's results, because we *should*
+        // have fewer than 100 scheduled jobs.
+        const ret = [];
+        const names = sjPage.page.map(sj => sj.displayName);
+        SCHEDULES.forEach(schedule => {
+          if (names.indexOf(schedule.displayName) < 0) {
+            ret.push(client.createScheduledJob(schedule));
+          }
+        });
+        return Promise.all(ret);
+      })
+      .then(() => {
+        console.log(`Completed setup of scheduled jobs`);
+      }),
 
-          // Use the built-in duplicate strategy "skip", which returns "skip"
-          // every time a task is asked to start when it is already running,
-          // which means we will only have at most 1 instance of any task
-          // running at the same time.
-          duplicateStrategy: 'skip',
-
-          // Use the built-in retry strategy "none", which returns null
-          // every time a failed task is asked to run again, which
-          // means that all failed tasks will never retry their execution.
-          retryStrategy: 'none',
-
-          // Use the built-in "cron" scheduling strategy.
-          taskCreationStrategy: 'cron',
-          scheduleDefinition: JSON.stringify(tern.strategies.cronToDefinition('30 * * * * *')),
-        }));
-      }
-      if (names.indexOf('2 minutes') < 0) {
-        ret.push(client.createScheduledJob({
-          displayName: '2 minutes',
-          description: 'Fire once every 2 minutes, at the 15 second mark',
-          duplicateStrategy: 'skip',
-          jobName: 'log',
-          jobContext: 'The once every 2 minutes job.',
-          retryStrategy: 'none',
-          taskCreationStrategy: 'cron',
-          scheduleDefinition: JSON.stringify(tern.strategies.cronToDefinition('15 */2 * * * *')),
-        }));
-      }
-      return Promise.all(ret);
-    })
-    .then(() => {
-      console.log(`Completed setup of scheduled jobs`);
-    }),
-
-
+    // ----------------------------------------------------------------------
+    // Start the scheduler.  Run independent of the schedule setup, but must
+    // be done after the schema update runs.
     new Promise((resolve) => {
       const scheduler = new tern.TernScheduler(config,
         // Custom job execution framework.
         {
           // Public API
           startJob: (taskId, jobName, context) => {
-            // Perform the execution entirely in-process.
-            return new Promise((resolve, reject) => {
-              // Needs to run later...
-              // FIXME the scheduler should handle the task running right away.
-              setTimeout(() => {
-                console.log(`Ran task ${taskId}: ${context}`);
-                if (this._messaging) {
-                  this._messaging.emit('jobExecutionFinished',
-                    // Job Execution ID, which we set to the task ID.
-                    taskId,
-                    // Finish state.
-                    {
-                      state: 'completed',
-                      result: 'success',
-                    });
-                }
-              }, 500);
-              // Use the task ID as the job execution ID.
-              resolve(taskId);
-            });
+            return jobRunner(taskId, jobName, context, this._messaging);
           },
           withMessaging: (messaging) => {
             this._messaging = messaging;
@@ -149,14 +107,115 @@ config.store.updateSchema()
       resolve();
     }),
 
-
-
   ]))
   .catch(e => {
     console.log(e);
     process.exit(1);
   });
 
+// --------------------------------------------------------------------------
+// Schedules
+const SCHEDULES = [
+  {
+    displayName: '30 seconds',
+    description: 'Fire on the 30 second mark of every minute',
 
+    // Name of the job to run and the context for the job.
+    // In this case, our job executor (below) uses the job name
+    // to lookup the method to invoke from the JOB_RUNNER object.
+    jobName: 'now',
+    jobContext: 'The once every 30 seconds job.',
+
+    // Use the built-in duplicate strategy "skip", which returns "skip"
+    // every time a task is asked to start when it is already running,
+    // which means we will only have at most 1 instance of any task
+    // running at the same time.
+    duplicateStrategy: 'skip',
+
+    // Use the built-in retry strategy "none", which returns null
+    // every time a failed task is asked to run again, which
+    // means that all failed tasks will never retry their execution.
+    retryStrategy: 'none',
+
+    // Use the built-in "cron" scheduling strategy.
+    taskCreationStrategy: 'cron',
+    // Trigger on the 0 and 30 second mark of every minute, every hour, etc.
+    scheduleDefinition: JSON.stringify(tern.strategies.cronToDefinition('0,30 * * * * *')),
+  },
+  {
+    displayName: '2 minutes',
+    description: 'Fire once every 2 minutes, at the 15 second mark',
+    duplicateStrategy: 'skip',
+    // The "later" job runs for 5 minutes, but this one runs once every 2
+    // minutes.  That means there is a time when the job is running and another
+    // is queued to run.  The duplicate strategy "skip" means that all
+    // triggered tasks while the another is running are not run.
+    jobName: 'later',
+    jobContext: 'The once every 2 minutes job.',
+    retryStrategy: 'none',
+    taskCreationStrategy: 'cron',
+    scheduleDefinition: JSON.stringify(tern.strategies.cronToDefinition('15 */2 * * * *')),
+  },
+]
+
+
+// --------------------------------------------------------------------------
+// Definition of the jobs we'll run.
+const JOB_RUNNER = {
+  now: (resolve) => {
+    resolve('now');
+  },
+  failNow: (_, reject) => {
+    reject(new Error('failed'));
+  },
+  soon: (resolve) => {
+    setTimeout(() => resolve('soon'), 200);
+  },
+  later: (resolve) => {
+    // 5 mintues from now
+    setTimeout(() => resolve('later'), 300 * 1000);
+  },
+  failLater: (_, reject) => {
+    setTimeout(() => reject(new Error('later')), 300 * 1000);
+  },
+  never: () => {
+    // do not resolve the promise.
+  },
+};
+function jobRunner(taskId, jobName, context, messaging) {
+  // Use the taskId as the executionId.
+  const execId = taskId;
+  console.log(`Starting task ${taskId}: ${context}`);
+  const realRunner = JOB_RUNNER[jobName];
+  new Promise(realRunner)
+    .then((res) => {
+      console.log(`Completed task ${taskId}: ${res}`);
+      if (messaging) {
+        messaging.emit('jobExecutionFinished',
+          execId,
+          // Finish state.
+          {
+            state: 'completed',
+            result: res,
+          });
+      }
+    })
+    .catch((e) => {
+      console.log(`Failed task ${taskId}: ${e.message}`);
+      if (messaging) {
+        messaging.emit('jobExecutionFinished',
+          execId,
+          {
+            state: 'failed',
+            result: e.message,
+          });
+      }
+    });
+  return execId;
+}
+
+
+// --------------------------------------------------------------------------
+// Finished setup; promises are running.
 
 console.log('Press <Ctrl-C> to stop the scheduler.');

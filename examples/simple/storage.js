@@ -4,7 +4,7 @@ const ternSql = require('@tern-scheduler/datastore-sql');
 
 function log(sql) {
   // Uncomment this to see all the SQL statements run.
-  console.log(`SQL: ${sql}`)
+  // console.log(`SQL: ${sql}`)
 }
 
 // Determine which datastore provider to use, based on the

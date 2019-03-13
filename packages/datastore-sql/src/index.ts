@@ -72,7 +72,14 @@ class SequelizeTable<T extends ScheduledJob | Task> implements datastore.db.DbTa
     return new Promise((resolve, reject) =>
       this._create(values, {
         isNewRecord: true,
-        returning: false,
+
+        // on MSSQL, this seems to cause the issue
+        // where returning the formatted values returns
+        // 0 results, so it crashes.
+        // See https://github.com/sequelize/sequelize/issues/10541
+        // returning: false,
+        returning: true,
+
         logging: this.logger,
         benchmark: !!this.logger,
       })
