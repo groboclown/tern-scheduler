@@ -2,7 +2,6 @@
 /* tslint:disable:no-unused-expression */
 
 import chai from 'chai'
-import { Sequelize } from 'sequelize-typescript'
 import {
   TernClient,
   JobExecutionEventEmitter,
@@ -11,13 +10,18 @@ import {
   executor,
 } from '@tern-scheduler/core'
 import {
+  Options,
+  Sequelize,
+} from 'sequelize'
+import {
   createSqlDataStore
 } from '../..'
 const expect = chai.expect
 
-export function standardDataStoreTests(sequelize: Sequelize): void {
+export function standardDataStoreTests(options: Options): void {
+  const sequelize = new Sequelize(options)
   const datastore = createSqlDataStore(sequelize, (sql, time) => {
-    console.log(`${sequelize.options.dialect}: [${sql}] took ${time} ms`)
+    console.log(`${options.dialect}: [${sql}] took ${time} ms`)
   })
 
   before(() => sequelize.drop().then(() => datastore.updateSchema(), () => datastore.updateSchema()))

@@ -78,6 +78,17 @@ You need access to a PostGreSQL database server with enough access to perform ta
 * `POSTGRES_HOST` hostname of the database server ; defaults to `localhost`
 * `POSTGRES_PORT` listening TCP port for the server ; defaults to `5432`
 
+## Testing with MariaDB
+
+*See the [test connector](lib/__mocha__/mariadb.tests.ts)*
+
+You need access to a MariaDB database server with enough access to perform table create and drop operations.   Alternatively, you can run it in a docker container.  In either case, you will need to define the following environment variables to run the tests against that database server:
+
+* `MARIADB_DB` database to store the tables.
+* `MARIADB_USERNAME` username for authentication.
+* `MARIADB_PASSWORD` password for authentication.
+* `MARIADB_HOST` hostname of the database server ; defaults to `localhost`
+* `MARIADB_PORT` listening TCP port for the server ; defaults to `3306`
 
 ## Testing with Microsoft SQL Server
 

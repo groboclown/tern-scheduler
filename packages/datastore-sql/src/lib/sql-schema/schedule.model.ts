@@ -1,130 +1,105 @@
 import {
-  Table,
-  Column,
+  Sequelize,
   Model,
-  PrimaryKey,
-  DataType
-} from 'sequelize-typescript'
+  STRING,
+  DATE,
+  BOOLEAN,
+  TEXT,
+} from 'sequelize'
 
-import { datastore } from '@tern-scheduler/core'
+export function createScheduledJobModel(sequelize: Sequelize): typeof Model & Model {
+  return sequelize.define('TERN_SCHEDULE', {
+    // ---------------------------------------
+    // BaseModel
+    pk: {
+      type: STRING(64), // datastore.PrimaryKeyType
+      allowNull: false,
+      primaryKey: true,
+    },
 
-@Table({
-  tableName: 'TERN_SCHEDULE',
-})
-export class ScheduledJob extends Model<ScheduledJob> implements datastore.db.ScheduledJobDataModel {
-  // ---------------------------------------
-  // BaseModel
-  @PrimaryKey
-  @Column({
-    type: DataType.STRING(64),
-    allowNull: false,
-  })
-  pk!: datastore.PrimaryKeyType
+    // ---------------------------------------
+    // ScheduledJobDataModel
+    leaseOwner: {
+      type: STRING(64), // datastore.LeaseIdType
+      allowNull: true,
+    },
+    leaseExpires: {
+      type: DATE, // Date | null
+      allowNull: true,
+    },
 
-  // ---------------------------------------
-  // ScheduledJobDataModel
-  @Column({
-    type: DataType.STRING(64),
-  })
-  leaseOwner!: datastore.LeaseIdType | null
-
-  @Column({
-    type: DataType.DATE,
-  })
-  leaseExpires!: Date | null
-
-  // ---------------------------------------
-  // ScheduledJobModel
-  @Column({
-    type: DataType.STRING(64),
-  })
-  updateState!: datastore.ScheduleUpdateStateType | null
-
-  @Column({
-    type: DataType.STRING(64),
-  })
-  updateTaskPk!: datastore.PrimaryKeyType | null
-
-  @Column({
-    type: DataType.BOOLEAN,
-    allowNull: false,
-  })
-  pasture!: boolean
-
-  @Column({
-    type: DataType.STRING(256),
-  })
-  pastureReason!: string | null
-
-  @Column({
-    type: DataType.STRING(256),
-    allowNull: false,
-  })
-  displayName!: string
-
-  @Column({
-    type: DataType.STRING(2048),
-    allowNull: false,
-  })
-  description!: string
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: false,
-  })
-  createdOn!: Date
-
-  @Column({
-    type: DataType.STRING(64),
-    allowNull: false,
-  })
-  duplicateStrategy!: string
-
-  @Column({
-    type: DataType.STRING(64),
-    allowNull: false,
-  })
-  retryStrategy!: string
-
-  // Job details.
-
-  @Column({
-    type: DataType.STRING(256),
-    allowNull: false,
-  })
-  jobName!: string
-
-  @Column({
-    type: DataType.TEXT,
-    allowNull: false,
-  })
-  jobContext!: string
-
-  @Column({
-    type: DataType.STRING(64),
-    allowNull: false,
-  })
-  taskCreationStrategy!: string
-
-  @Column({
-    type: DataType.TEXT,
-    allowNull: false,
-  })
-  scheduleDefinition!: string
-
-  @Column({
-    type: DataType.STRING(64),
-  })
-  previousSchedule!: datastore.PrimaryKeyType | null
-
-  @Column({
-    type: DataType.STRING(256),
-  })
-  previousReason!: string | null
-
-  @Column({
-    type: DataType.TEXT,
-    allowNull: true,
-  })
-  repairState!: string | null
+    // ---------------------------------------
+    // ScheduledJobModel
+    updateState: {
+      type: STRING(64), // datastore.ScheduleUpdateStateType | null
+      allowNull: true,
+    },
+    updateTaskPk: {
+      type: STRING(64), // datastore.PrimaryKeyType | null
+      allowNull: true,
+    },
+    pasture: {
+      type: BOOLEAN, // boolean
+      allowNull: false,
+    },
+    pastureReason: {
+      type: STRING(255), // string | null
+      allowNull: true,
+    },
+    displayName: {
+      type: STRING(255), // string
+      allowNull: false,
+    },
+    description: {
+      type: STRING(2047), // string
+      allowNull: false,
+    },
+    createdOn: {
+      type: DATE, // Date
+      allowNull: false,
+    },
+    duplicateStrategy: {
+      type: STRING(64), // string
+      allowNull: false,
+    },
+    retryStrategy: {
+      type: STRING(64), // string
+      allowNull: false,
+    },
+    jobName: {
+      type: STRING(255), // string
+      allowNull: false,
+    },
+    jobContext: {
+      type: TEXT, // string
+      allowNull: false,
+    },
+    taskCreationStrategy: {
+      type: STRING(64), // string
+      allowNull: false,
+    },
+    scheduleDefinition: {
+      type: TEXT, // string
+      allowNull: false,
+    },
+    previousSchedule: {
+      type: STRING(64), // datastore.PrimaryKeyType | null
+      allowNull: true,
+    },
+    previousReason: {
+      type: STRING(256), // string | null
+      allowNull: true,
+    },
+    repairState: {
+      type: TEXT, // string | null
+      allowNull: true,
+    },
+  }, {
+      timestamps: false,
+      paranoid: false,
+      underscored: true,
+      freezeTableName: false,
+      tableName: 'TERN_SCHEDULE',
+    }
+  ) as (typeof Model & Model)
 }

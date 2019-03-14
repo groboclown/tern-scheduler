@@ -21,10 +21,20 @@ services:
       POSTGRES_PASSWORD: "tern-pw"
       POSTGRES_DB: "tern"
 
+  mariadb:
+    image: mariadb:latest
+    ports:
+      - 19002:3306
+    environment:
+      MYSQL_USER: "tern-user"
+      MYSQL_PASSWORD: "tern-pw"
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: "tern"
+
   mssql:
     image: microsoft/mssql-server-linux:latest
     ports:
-      - 19002:1433
+      - 19003:1433
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "tern-pw-1234"

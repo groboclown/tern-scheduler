@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize-typescript'
+import { Options } from 'sequelize'
 import {
   standardDataStoreTests
 } from './all-datastores'
@@ -14,10 +14,10 @@ describe('SQLite compatibility', () => {
     return
   }
 
-  const sequelize = new Sequelize({
+  const sequelize: Options = {
     // Use in-memory database, not a file.
     dialect: 'sqlite',
-  })
+  }
 
   standardDataStoreTests(sequelize)
 })

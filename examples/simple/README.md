@@ -16,7 +16,7 @@ Then, you need to set the `TERN_DB` environment variable to a custom "connection
 
 For SQLite3 databases, use `TERN_DB="db=sqlite"` to indicate that the SQLite db is used with a memory-only database.  To use a specific file, then set it to `TERN_DB="db=sqlite;file=filename"`
 
-For MySQL (`db=mysql`), PostGreSQL (`db=postgres`), and Microsoft SQL Server (`db=mssql`), they all use the following keys:
+For MySQL (`db=mysql`), PostGreSQL (`db=postgres`), MariaDB (`db=mariadb`), and Microsoft SQL Server (`db=mssql`), they all use the following keys:
 
 * `name=(dbname)` the name of the database to connect to.
 * `user=(username)` the username to connect to the database.

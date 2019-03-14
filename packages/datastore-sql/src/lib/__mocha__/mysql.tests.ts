@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize-typescript'
+import { Options } from 'sequelize'
 import {
   standardDataStoreTests
 } from './all-datastores'
@@ -18,14 +18,14 @@ describe('MySql compatibility', () => {
     return
   }
 
-  const sequelize = new Sequelize({
+  const sequelize: Options = {
     database: mysqlDb,
     username: mysqlUser,
     password: mysqlPasswd,
     host: mysqlHost,
     port: Number(mysqlPort),
     dialect: 'mysql',
-  })
+  }
 
   standardDataStoreTests(sequelize)
 })

@@ -58,6 +58,15 @@ exports.datastore = (() => {
         port: Number(dbProviderSettings.port || '1433'),
         dialect: 'mssql',
       }, log);
+    case 'mariadb':
+      return ternSql.createSqlDataStore({
+        username: dbProviderSettings.user,
+        password: dbProviderSettings.password,
+        host: dbProviderSettings.host || 'localhost',
+        // TODO double-check mariadb default port.
+        port: Number(dbProviderSettings.port || '3306'),
+        dialect: 'mariadb',
+      }, log);
     case undefined:
     case null:
       throw new Error('Must define the DB provider type with the `TERN_DB` ENV value including "db=(provider)" value');

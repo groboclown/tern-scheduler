@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize-typescript'
+import { Options } from 'sequelize'
 import {
   standardDataStoreTests
 } from './all-datastores'
@@ -18,14 +18,14 @@ describe('Microsoft Sql compatibility', () => {
     return
   }
 
-  const sequelize = new Sequelize({
+  const sequelize: Options = {
     database: sqlDb,
     username: sqlUser,
     password: sqlPasswd,
     host: sqlHost,
     port: Number(sqlPort),
     dialect: 'mssql',
-  })
+  }
 
   standardDataStoreTests(sequelize)
 })

@@ -28,10 +28,15 @@ env:
     - POSTGRES_PASSWORD=tern-pw
     - POSTGRES_PORT=19001
 
+    - MARIADB_DB=tern
+    - MARIADB_USERNAME=tern-user
+    - MARIADB_PASSWORD=tern-pw
+    - MARIADB_PORT=19002
+
     - MSSQL_DB=master
     - MSSQL_USERNAME=sa
     - MSSQL_PASSWORD=tern-pw-1234
-    - MSSQL_PORT=19002
+    - MSSQL_PORT=19003
 
 
 #before_install:
@@ -43,11 +48,11 @@ install:
   # Wait for the docker services to start
   - echo "Waiting for MySQL" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19000
   - echo "Waiting for PostGreSQL" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19001
-  - echo "Waiting for MS SQL" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19002
+  - echo "Waiting for MariaDB" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19002
+  - echo "Waiting for MS SQL" ; timeout 22 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 1; done' localhost 19003
 
 jobs:
   include:
     - stage: "Build and Test"
       name: "TypeScript Compile and Test"
       script: "npm run build && npm run test"
-

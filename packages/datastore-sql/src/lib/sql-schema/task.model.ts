@@ -1,85 +1,79 @@
 import {
-  Table,
-  Column,
+  Sequelize,
   Model,
-  DataType,
-  PrimaryKey,
-} from 'sequelize-typescript'
+  STRING,
+  DATE,
+  INTEGER,
+  TEXT,
+} from 'sequelize'
 
-import { datastore } from '@tern-scheduler/core'
+export function createTaskModel(sequelize: Sequelize): typeof Model & Model {
+  return sequelize.define('TERN_TASK', {
+    // ---------------------------------------
+    // BaseModel
 
-@Table({
-  tableName: 'TERN_TASK',
-})
-export class Task extends Model<Task> implements datastore.db.TaskDataModel {
-  @PrimaryKey
-  @Column({
-    type: DataType.STRING(64),
-    allowNull: false,
-  })
-  pk!: string
+    pk: {
+      type: STRING(64), // datastore.PrimaryKeyType
+      primaryKey: true,
+      allowNull: false,
+    },
 
-  // Foreign key stuff is only used as a marker;
-  // the datastore code does its own lookups.
-  // @ForeignKey(() => Schedule)
-  @Column({
-    type: DataType.STRING(64),
-    allowNull: false,
-  })
-  schedule!: string
+    // ---------------------------------------
+    // TaskDataModel
 
-  @Column({
-    type: DataType.STRING(64),
-    allowNull: false,
-  })
-  state!: datastore.TaskStateType
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: false,
-  })
-  createdOn!: Date
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: false,
-  })
-  executeAt!: Date
-
-  @Column({
-    type: DataType.STRING(128),
-  })
-  executionJobId!: string | null
-
-  @Column({
-    type: DataType.DATE,
-  })
-  executionQueued!: Date | null
-
-  @Column({
-    type: DataType.DATE,
-  })
-  executionStarted!: Date | null
-
-  @Column({
-    type: DataType.DATE,
-  })
-  executionFinished!: Date | null
-
-  @Column({
-    type: DataType.DATE,
-  })
-  nextTimeoutCheck!: Date | null
-
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-  })
-  retryIndex!: number
-
-  @Column({
-    type: DataType.TEXT,
-  })
-  completedInfo!: string | null
-
+    // ---------------------------------------
+    // TaskModel
+    schedule: {
+      type: STRING(64), // datastore.PrimaryKeyType
+      // references: { model: 'TERN_SCHEDULE', key: 'pk' },
+      allowNull: false,
+    },
+    state: {
+      type: STRING(64), // datastore.TaskStateType
+      allowNull: false,
+    },
+    createdOn: {
+      type: DATE, // Date
+      allowNull: false,
+    },
+    executeAt: {
+      type: DATE, // Date
+      allowNull: false,
+    },
+    executionJobId: {
+      type: STRING(255), // string | null
+      allowNull: true,
+    },
+    executionQueued: {
+      type: DATE, // Date | null
+      allowNull: true,
+    },
+    executionStarted: {
+      type: DATE, // Date | null
+      allowNull: true,
+    },
+    executionFinished: {
+      type: DATE, // Date | null
+      allowNull: true,
+    },
+    nextTimeoutCheck: {
+      type: DATE, // Date | null
+      allowNull: true,
+    },
+    retryIndex: {
+      type: INTEGER, // number
+      allowNull: false,
+    },
+    completedInfo: {
+      type: TEXT, // string | null
+      allowNull: true,
+    },
+  }, {
+      timestamps: false,
+      paranoid: false,
+      underscored: true,
+      freezeTableName: false,
+      tableName: 'TERN_TASK',
+    }
+  ) as (typeof Model & Model)
 }
