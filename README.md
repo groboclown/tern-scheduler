@@ -4,10 +4,10 @@
 
 | Packages | Status | |
 |---|---|---|
-| [`@tern-scheduler/core`](packages/core) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?type=dev) |
-| [`@tern-scheduler/datastore-sql`](packages/datastore-sql) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev) |
-| [`@tern-scheduler/cli`](packages/cli) | <!--[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler)--> | <!--[![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler?type=dev)--> |
-| [`@tern-scheduler/rest-api`](packages/rest-api) | <!--[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/rest-api)](https://david-dm.org/groboclown/tern-scheduler)--> | <!--[![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/rest-api)](https://david-dm.org/groboclown/tern-scheduler?type=dev)--> |
+| [`@tern-scheduler/core`](packages/core) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?path=packages/core) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/core)](https://david-dm.org/groboclown/tern-scheduler?type=dev&path=packages/core) |
+| [`@tern-scheduler/datastore-sql`](packages/datastore-sql) | [![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?path=packages/datastore-sql) | [![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/datastore-sql&path=packages/datastore-sql)](https://david-dm.org/groboclown/tern-scheduler?type=dev) |
+| [`@tern-scheduler/cli`](packages/cli) | <!--[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler?path=packages/cli)--> | <!--[![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/cli)](https://david-dm.org/groboclown/tern-scheduler?type=dev&path=packages/cli)--> |
+| [`@tern-scheduler/rest-api`](packages/rest-api) | <!--[![Dependency Status](https://david-dm.org/groboclown/tern-scheduler.svg?path=packages/rest-api)](https://david-dm.org/groboclown/tern-scheduler?path=packages/rest-api)--> | <!--[![devDependency Status](https://david-dm.org/groboclown/tern-scheduler/dev-status.svg?path=packages/rest-api)](https://david-dm.org/groboclown/tern-scheduler?type=dev&path=packages/rest-api)--> |
 
 Tern aims to be a cluster-friendly scheduling service, able to provide reliability and high availability in the scheduling service.
 
@@ -32,7 +32,7 @@ Tern is still under development, but it is being developed with these goals:
 
 The following are anti-goals for the project:
 
-* **Workflow.**  Tern does not manage the chaining of job execution.  You might be tempted to use the job conflict resolution to do this, but don't.  There are other tools that can be used for this that handle all those fiddly bits that Tern doesn't.
+* **Workflow.**  Tern does not manage the chaining of job execution.  There are other tools that can be used for this that handle all those fiddly bits that Tern doesn't.
 * **Job execution.** For the simplest of cases, you can run the job directly in the Tern service.  However, for the most part, you will want to delegate to another tool that can better handle clustered job execution.
 * **Job conflict.** If two jobs cannot run simultaneously, then it's up to the job execution framework to understand that conflict and report that the job requires a retry.
 
@@ -126,13 +126,13 @@ const scheduler = new TernScheduler(config,
 ### What Are We Talking About
 
 Tern uses these terms to describe different aspects of the system:
-* *[data store](#choosing-a-data-store)* - The mechanism for providing persistent data storage.
-* *job* - An activity that the external job execution framework runs.
-* *job execution framework* - An external system that handles running and monitoring discrete units of work, called "jobs".  If the job framework chains several actions together, then that whole chain of actions are considered a single "job" by Tern.
-* *scheduled job* - A schedule for running a job, either once or on a reoccurring pattern.
-* *task* - A marker for when a specific job should run.  Tasks are "peeled" off of a scheduled job, as though the scheduled job is a daily calendar of when the next thing happens.
-* *strategy* - Part of the strategy programming pattern; it is a named way to perform a specific kind of action, or to answer a specific question.  Strategies are stored in a *strategy registration* object, to allow several approaches to the same problem.  Some of these are useful only for testing, while others can add flexibility to the system.
-* *node* - A single running instance of the scheduler.  Note that all nodes *should* be homogeneous (configured the same).  You don't have to, but to maintain sanity it's recommended that you do.
+* **[data store](#choosing-a-data-store)** - The mechanism for providing persistent data storage.
+* **job** - An activity that the external job execution framework runs.
+* **job execution framework** - An external system that handles running and monitoring discrete units of work, called "jobs".  If the job framework chains several actions together, then that whole chain of actions are considered a single "job" by Tern.
+* **scheduled job** - A schedule for running a job, either once or on a reoccurring pattern.
+* **task** - A marker for when a specific job should run.  Tasks are "peeled" off of a scheduled job, as though the scheduled job is a daily calendar of when the next thing happens.
+* **strategy** - Part of the strategy programming pattern; it is a named way to perform a specific kind of action, or to answer a specific question.  Strategies are stored in a *strategy registration* object, to allow several approaches to the same problem.  Some of these are useful only for testing, while others can add flexibility to the system.
+* **node** - A single running instance of the scheduler.  Note that all nodes *should* be homogeneous (configured the same).  You don't have to, but to maintain sanity it's recommended that you do.
 
 
 ### Choosing a Data Store
@@ -157,7 +157,7 @@ Examples of some implementations that may become standardized:
 
 * Docker execute task
 * Hadoop process execution
-* Amazon SWF workflow execution
+* Amazon Simple Workflow Framework
 
 
 ### Choosing a Messaging Pipeline
@@ -177,7 +177,9 @@ The task creation strategy allows for configurable behavior for creating a new t
 
 * **At scheduled job creation.**  When the scheduled job is first created, a fresh, initial task must be created.
 * **When the last task completes.**  When a task finishes its execution, either with a failure or success, a new task can be created.  If the task needed to retry its operation, then only the final non-retried task execution attempts to create the next task.
-* **When the last task first starts running.**  When a task is slated to start running for the first time, without retries,
+* **When the last task first starts running.**  When a task is slated to start running for the first time, without retries.
+
+Tern comes out-of-the-box with cron-like scheduling, one-time task execution, and "X seconds after last run completes".
 
 #### Duplicate Task Behavior
 
@@ -185,9 +187,13 @@ There are times when a task can take such a long time to run, or needs to retry 
 
 This is configurable per scheduled job.
 
+Tern comes out-of-the-box with "always-skip" and "always-run" strategies.
+
 #### Lease ID Creation
 
-The library must create globally unique IDs per attempt to obtain a lease on a strategy job.  The default behavior is to use a UUID v5 algorithm with the `HOSTNAME` environment variable as the main discriminator.
+The library must create globally unique IDs per attempt to obtain a lease on a strategy job.  The default behavior is to use a UUID v4 algorithm with the `HOSTNAME` environment variable as the main discriminator.
+
+Term comes out-of-the-box with a UUID v4 implementation.
 
 #### Lease Time
 
@@ -205,7 +211,7 @@ Note that the library uses events to handle these requests, but the event emitte
 
 Tern is written to allow for different kinds of data stores.  To that end, it can't rely upon the underlying data store to generate guaranteed unique identifiers across nodes.
 
-By default, this uses a UUID v5 algorithm with the `HOSTNAME` environment variable as the main discriminator.
+By default, this uses a UUID v4 algorithm with the `HOSTNAME` environment variable as the main discriminator.
 
 #### Current Time
 
@@ -234,3 +240,10 @@ Repairing scheduled jobs and tasks in an uncertain state needs to be handled.  T
 
 If we want to cancel one future task, then doing so should set the task to a new "never run" state, and peel a new subsequent task as though the just-canceled task started then completed.  It's a new "finished" state.  This is an easy win for functionality.
 
+### Better Logging
+
+Logging is pretty minimal at the moment.
+
+### Improved Event Processing
+
+Attempts have been made to generate appropriate events, but there are probably holes in this.
