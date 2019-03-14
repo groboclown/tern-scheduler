@@ -5,10 +5,17 @@ export {
   JobExecutionStateCompleted,
   JobExecutionStateFailed,
   JobExecutionStateRunning,
-  StartJob,
+  JobExecutionStateDidNotStart,
   isJobExecutionStateCompleted,
   isJobExecutionStateFailed,
   isJobExecutionStateRunning,
+  isJobExecutionStateDidNotStart,
+  EXECUTION_RUNNING,
+  EXECUTION_COMPLETED,
+  EXECUTION_DID_NOT_START,
+  EXECUTION_FAILED,
+  ALLOWED_EXECUTION_STATES,
+  StartJob,
 } from './types'
 
 

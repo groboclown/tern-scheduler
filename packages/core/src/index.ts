@@ -23,6 +23,8 @@ export {
 export {
   MessagingEventEmitter,
   JobExecutionEventEmitter,
+  TaskPollingEventEmitter,
+  ScheduledJobPollingEventEmitter,
 } from './lib/messaging'
 
 export {
@@ -44,6 +46,7 @@ export namespace executor {
   export type JobExecutionStateCompleted = libExecutor.JobExecutionStateCompleted
   export type JobExecutionStateFailed = libExecutor.JobExecutionStateFailed
   export type JobExecutionStateRunning = libExecutor.JobExecutionStateRunning
+  export type JobExecutionStateDidNotStart = libExecutor.JobExecutionStateDidNotStart
   export type StartJob = libExecutor.StartJob
 
   // duplicate, so that it looks consistent
@@ -52,6 +55,12 @@ export namespace executor {
   export const isJobExecutionStateCompleted = libExecutor.isJobExecutionStateCompleted
   export const isJobExecutionStateFailed = libExecutor.isJobExecutionStateFailed
   export const isJobExecutionStateRunning = libExecutor.isJobExecutionStateRunning
+  export const isJobExecutionStateDidNotStart = libExecutor.isJobExecutionStateDidNotStart
+
+  export const EXECUTION_COMPLETED = libExecutor.EXECUTION_COMPLETED
+  export const EXECUTION_DID_NOT_START = libExecutor.EXECUTION_DID_NOT_START
+  export const EXECUTION_FAILED = libExecutor.EXECUTION_FAILED
+  export const EXECUTION_RUNNING = libExecutor.EXECUTION_RUNNING
 }
 
 export namespace strategies {

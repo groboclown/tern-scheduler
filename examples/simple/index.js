@@ -146,15 +146,26 @@ const SCHEDULES = [
     displayName: '2 minutes',
     description: 'Fire once every 2 minutes, at the 15 second mark',
     duplicateStrategy: 'skip',
-    // The "later" job runs for 5 minutes, but this one runs once every 2
-    // minutes.  That means there is a time when the job is running and another
-    // is queued to run.  The duplicate strategy "skip" means that all
-    // triggered tasks while the another is running are not run.
-    jobName: 'later',
+    jobName: 'soon',
     jobContext: 'The once every 2 minutes job.',
     retryStrategy: 'none',
     taskCreationStrategy: 'cron',
     scheduleDefinition: JSON.stringify(tern.strategies.cronToDefinition('15 */2 * * * *')),
+  },
+  {
+    displayName: 'every 10 seconds, on every 3rd minute',
+    description: 'Every 10 seconds for only every 3rd minute, run for 15 seconds',
+    duplicateStrategy: 'skip',
+    // The "soon" job runs for 15 seconds, but this one runs once every 10
+    // seconds.  That means there is a time when the job is running and another
+    // is queued to run.  The duplicate strategy "skip" means that all
+    // triggered tasks while the another is running are not run.
+    //jobName: 'later',
+    jobName: 'soon',
+    jobContext: 'Duplicate Check Job',
+    retryStrategy: 'none',
+    taskCreationStrategy: 'cron',
+    scheduleDefinition: JSON.stringify(tern.strategies.cronToDefinition('*/10 */3 * * * *')),
   },
 ]
 
@@ -165,17 +176,21 @@ const JOB_RUNNER = {
   now: (resolve) => {
     resolve('now');
   },
-  failNow: (_, reject) => {
+  nowFail: (_, reject) => {
     reject(new Error('failed'));
   },
-  soon: (resolve) => {
+  nowLongStartTime: (resolve) => {
     setTimeout(() => resolve('soon'), 200);
+  },
+  soon: (resolve) => {
+    // 5 mintues from now
+    setTimeout(() => resolve('soon'), 15 * 1000);
   },
   later: (resolve) => {
     // 5 mintues from now
     setTimeout(() => resolve('later'), 300 * 1000);
   },
-  failLater: (_, reject) => {
+  laterFail: (_, reject) => {
     setTimeout(() => reject(new Error('later')), 300 * 1000);
   },
   never: () => {
@@ -187,7 +202,21 @@ function jobRunner(taskId, jobName, context, messaging) {
   const execId = taskId;
   console.log(`Starting task ${taskId}: ${context}`);
   const realRunner = JOB_RUNNER[jobName];
-  new Promise(realRunner)
+  const p = new Promise(realRunner);
+  if (jobName.startsWith('now')) {
+    return p
+      .then((v) => {
+        console.log(`Task ${taskId} completed in-execution: ${v}`);
+        return { state: tern.executor.EXECUTION_COMPLETED, result: v };
+      })
+      .catch((e) => {
+        // Maybe include another fail state to allow for failed-to-start error?
+        console.log(`Task ${taskId} failed in-execution`, e);
+        return { state: tern.executor.EXECUTION_FAILED, result: e.message };
+      });
+  }
+  // The promise completes later, so emit the right message later.
+  p
     .then((res) => {
       console.log(`Completed task ${taskId}: ${res}`);
       if (messaging) {
@@ -211,7 +240,8 @@ function jobRunner(taskId, jobName, context, messaging) {
           });
       }
     });
-  return execId;
+  console.log(`Launched task ${taskId}.  Waiting for it to finish before emitting a message.`);
+  return Promise.resolve({ state: tern.executor.EXECUTION_RUNNING, jobId: execId });
 }
 
 

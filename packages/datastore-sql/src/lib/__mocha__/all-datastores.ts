@@ -86,6 +86,8 @@ class TestJobExecutionManager implements executor.JobExecutionManager {
     const execId = this.createdJobs.length.toString()
     this.messaging && this.messaging.emit('jobExecutionFinished', execId,
       { state: 'completed', result: context } as executor.JobExecutionStateCompleted)
-    return Promise.resolve(execId)
+    return Promise.resolve(
+      { state: executor.EXECUTION_RUNNING, jobId: execId }
+    )
   }
 }

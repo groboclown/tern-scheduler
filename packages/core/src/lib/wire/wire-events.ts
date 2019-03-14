@@ -70,7 +70,8 @@ export function wireDataStore(
       const now = currentTimeUTC()
       startTask(
         store, task, leaseBehavior, now,
-        jobExecutor.startJob, taskCreationReg, currentTimeUTC,
+        jobExecutor.startJob, retryReg, taskCreationReg,
+        duplicateReg, currentTimeUTC,
         createPrimaryKeyStrat, messaging
       )
         .catch((e) => {

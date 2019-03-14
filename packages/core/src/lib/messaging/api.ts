@@ -13,7 +13,13 @@ import {
 } from '../executor/types'
 
 
-export interface ScheduledJobEvents {
+// The events are split by the responsibility for generating the
+// event.
+
+/**
+ * All events that the scheduler inner workings generate.
+ */
+export interface SchedulerEvents {
   /**
    * The scheduled job was expired, either explicitly by a user request,
    * or implicitly because of a problem discovered by the scheduler.
@@ -21,23 +27,10 @@ export interface ScheduledJobEvents {
   scheduledJobDisabled: (schedule: ScheduledJobModel) => void
 
   /**
-   * If a scheduled job has an expired lease, it could mean that it's in
-   * a broken state, and the corresponding task states must be repaired.
-   */
-  scheduledJobLeaseExpired: (schedule: ScheduledJobModel) => void
-}
-
-export interface TaskEvents {
-  /**
    * The task creation strategy dictated that a new task be created
    * for a schedule to run at some future time.
    */
   taskCreated: (task: TaskModel) => void
-
-  /**
-   * Task execution time triggered.
-   */
-  taskReadyToExecute: (task: TaskModel) => void
 
   /**
    * The job execution framework completed its work to start the
@@ -50,6 +43,25 @@ export interface TaskEvents {
    * The task has already been updated with the right finish state.
    */
   taskFinished: (task: TaskModel) => void
+}
+
+
+export interface ScheduledJobPollingEvents {
+  /**
+   * If a scheduled job has an expired lease, it could mean that it's in
+   * a broken state, and the corresponding task states must be repaired.
+   */
+  scheduledJobLeaseExpired: (schedule: ScheduledJobModel) => void
+}
+
+
+
+export interface TaskPollingEvents {
+
+  /**
+   * Task execution time triggered.
+   */
+  taskReadyToExecute: (task: TaskModel) => void
 
   /**
    * The task has spent too long in the "queued for execution" state, meaning that
@@ -72,6 +84,8 @@ export interface JobExecutionEvents {
    * Informative message from the job framework that the job execution completed.
    * This needs to be emitted either through a polling mechanism or by tying the
    * job framework event notification system to this event.
+   *
+   * This should only be triggered
    */
   jobExecutionFinished: (execId: ExecutionJobId, result: JobExecutionState) => void
 }
@@ -101,8 +115,14 @@ export interface ErrorEvents {
  * use the messaging API.
  */
 export interface MessagingEvents
-  extends ScheduledJobEvents, TaskEvents, JobExecutionEvents, ErrorEvents {
+  extends SchedulerEvents, ScheduledJobPollingEvents, TaskPollingEvents, JobExecutionEvents, ErrorEvents {
 }
+
+export type SchedulerEventEmitter = StrictEventEmitter<EventEmitter, SchedulerEvents & ErrorEvents>
+
+export type ScheduledJobPollingEventEmitter = StrictEventEmitter<EventEmitter, ScheduledJobPollingEvents & ErrorEvents>
+
+export type TaskPollingEventEmitter = StrictEventEmitter<EventEmitter, TaskPollingEvents & ErrorEvents>
 
 export type JobExecutionEventEmitter = StrictEventEmitter<EventEmitter, JobExecutionEvents>
 

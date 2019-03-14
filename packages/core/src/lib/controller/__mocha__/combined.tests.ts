@@ -110,7 +110,6 @@ describe('combined', () => {
   })
 
   describe('#taskFinished', () => {
-
   })
 
   describe('#disableSchedule', () => {

@@ -7,6 +7,10 @@ import {
   TaskStateType,
   TaskModel
 } from '../model'
+import {
+  JobExecutionState,
+  ALLOWED_EXECUTION_STATES,
+} from '../executor'
 
 export class LeaseError extends TernError {
   constructor(
@@ -79,5 +83,15 @@ export class InvalidTaskStateError extends TernError {
     // Error workaround fun
     this.name = InvalidTaskStateError.name
     Object.setPrototypeOf(this, InvalidTaskStateError.prototype)
+  }
+}
+
+export class InvalidJobExecutionStatusError extends TernError {
+  constructor(readonly jobExecutionState: JobExecutionState) {
+    super(`Unknown job execution state: ${JSON.stringify(jobExecutionState)}; "state" must be one of ${ALLOWED_EXECUTION_STATES}`)
+
+    // Error workaround fun
+    this.name = InvalidJobExecutionStatusError.name
+    Object.setPrototypeOf(this, InvalidJobExecutionStatusError.prototype)
   }
 }
