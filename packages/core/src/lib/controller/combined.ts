@@ -436,7 +436,7 @@ function addTaskDuplicateCheck(
         schedule: sched.pk,
         createdOn: now,
         state: TASK_STATE_PENDING,
-        executeAt: executeAt,
+        executeAt,
         executionJobId: null,
         retryIndex: 0,
         completedInfo: null,
