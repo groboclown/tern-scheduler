@@ -90,6 +90,10 @@ export interface JobExecutionEvents {
   jobExecutionFinished: (execId: ExecutionJobId, result: JobExecutionState) => void
 }
 
+export interface AuditEvents {
+  repairStarted: (schedule: ScheduledJobModel, problem: string, when: Date) => void
+}
+
 export interface ErrorEvents {
   /**
    * Triggered when an unexpected error happens within the system.  Usually, the
@@ -104,6 +108,12 @@ export interface ErrorEvents {
    * created from it.
    */
   invalidScheduleDefinition: (schedule: ScheduledJobModel) => void
+
+  /**
+   * Indicates a discovered internal inconsistency in the scheduler state, or an
+   * error where one should not have been generated.
+   */
+  internalError: (e: any) => void
 }
 
 /**
@@ -115,7 +125,7 @@ export interface ErrorEvents {
  * use the messaging API.
  */
 export interface MessagingEvents
-  extends SchedulerEvents, ScheduledJobPollingEvents, TaskPollingEvents, JobExecutionEvents, ErrorEvents {
+  extends SchedulerEvents, ScheduledJobPollingEvents, TaskPollingEvents, JobExecutionEvents, AuditEvents, ErrorEvents {
 }
 
 export type SchedulerEventEmitter = StrictEventEmitter<EventEmitter, SchedulerEvents & ErrorEvents>

@@ -130,7 +130,7 @@ const SCHEDULES = [
     // every time a task is asked to start when it is already running,
     // which means we will only have at most 1 instance of any task
     // running at the same time.
-    duplicateStrategy: 'skip',
+    duplicateStrategy: tern.strategies.ALWAYS_SKIP_DUPLICATE_TASK_NAME,
 
     // Use the built-in retry strategy "none", which returns null
     // every time a failed task is asked to run again, which
@@ -145,7 +145,7 @@ const SCHEDULES = [
   {
     displayName: '2 minutes',
     description: 'Fire once every 2 minutes, at the 15 second mark',
-    duplicateStrategy: 'skip',
+    duplicateStrategy: tern.strategies.ALWAYS_SKIP_DUPLICATE_TASK_NAME,
     jobName: 'soon',
     jobContext: 'The once every 2 minutes job.',
     retryStrategy: 'none',
@@ -155,7 +155,7 @@ const SCHEDULES = [
   {
     displayName: 'every 10 seconds, on every 3rd minute',
     description: 'Every 10 seconds for only every 3rd minute, run for 15 seconds',
-    duplicateStrategy: 'skip',
+    duplicateStrategy: tern.strategies.ALWAYS_SKIP_DUPLICATE_TASK_NAME,
     // The "soon" job runs for 15 seconds, but this one runs once every 10
     // seconds.  That means there is a time when the job is running and another
     // is queued to run.  The duplicate strategy "skip" means that all

@@ -88,6 +88,10 @@ export namespace strategies {
   export const DUPLICATE_TASK_RUN_NEW = libStrats.DUPLICATE_TASK_RUN_NEW
   export const DUPLICATE_TASK_SKIP_NEW = libStrats.DUPLICATE_TASK_SKIP_NEW
 
+  export const ALWAYS_SKIP_DUPLICATE_TASK_NAME = libStrats.ALWAYS_SKIP_DUPLICATE_TASK_NAME
+  export const ALWAYS_RUN_DUPLICATE_TASK_NAME = libStrats.ALWAYS_RUN_DUPLICATE_TASK_NAME
+
+
   export const addUUIDCreateLeaseIdStrategy = libStrats.addUUIDCreateLeaseIdStrategy
   export const registerStandardTimeStrategy = libStrats.registerStandardTimeStrategy
   export const addUUIDCreatePrimaryKeyStrategy = libStrats.addUUIDCreatePrimaryKeyStrategy

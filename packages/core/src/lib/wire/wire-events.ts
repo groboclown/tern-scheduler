@@ -5,6 +5,7 @@ import {
 import {
   startTask,
   taskFinished,
+  repairExpiredSchedule,
   LeaseBehavior,
 } from '../controller'
 import {
@@ -23,7 +24,9 @@ import {
 import {
   logCriticalError,
   logNotificationError,
+  logInfo,
 } from '../logging'
+import { LeaseNotObtainedError } from '../errors'
 
 
 
@@ -47,24 +50,24 @@ export function wireDataStore(
   messaging
     .on('generalError', (e) => {
       // Standard log handling.  End users can monitor this in their own way.
+      if (e instanceof LeaseNotObtainedError) {
+        logNotificationError('(failed to obtain lease)', e.message)
+      } else {
+        logCriticalError(e)
+      }
+    })
+    .on('internalError', (e) => {
+      logCriticalError('Internal error discovered:')
       logCriticalError(e)
     })
     .on('scheduledJobLeaseExpired', (schedule) => {
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      // FIXME need to handle fixing expired job leases.
-      logNotificationError(`scheduled job expired: ${schedule.pk}`, null)
+      repairExpiredSchedule(store, schedule, currentTimeUTC(), leaseBehavior, messaging)
+        .then(() => {
+          logInfo('scheduledJobLeaseExpired', `Repaired schedule "${schedule.displayName}"`)
+        })
+        .catch((e) => {
+          messaging.emit('generalError', e)
+        })
     })
     .on('taskReadyToExecute', (task) => {
       const now = currentTimeUTC()

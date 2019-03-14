@@ -157,6 +157,7 @@ export interface DataStore {
    * different, then that means no other process stole the lease.
    *
    * On release, the lease ID and lease expiration should be set to `null` values.
+   * Additionally, the repair state must be set to `null`.
    *
    * Errors are raised in the promise for:
    * - The lease was stolen by another process
@@ -174,8 +175,14 @@ export interface DataStore {
   ): Promise<void>
 
   /**
-   * Steal an expired lease.  Used by tasks that need to repair the lease state.
-   * The lease is broken if and only if its current state is expired.
+   * Steal an expired lease.  Used by tasks that need to repair the lease
+   * state.  The lease is broken if and only if its current state is expired.
+   * The returned scheduled job MUST reflect the stored state of the object,
+   * which includes the new updating state set to "repair" and the
+   * repair state set to the previous state, unless the repair state was already
+   * non-null.
+   *
+   * If the lease cannot be obtained, then this returns `null`.
    *
    * @param jobPk
    * @param newLeaseId
@@ -185,7 +192,7 @@ export interface DataStore {
   repairExpiredLeaseForScheduledJob(
     jobPk: PrimaryKeyType, newLeaseId: LeaseIdType,
     now: Date, leaseTimeSeconds: number
-  ): Promise<void>
+  ): Promise<ScheduledJobModel | null>
 
   /**
    * Mark the currently leased scheduled job as needing repair.  It does this by

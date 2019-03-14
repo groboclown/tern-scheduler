@@ -207,6 +207,7 @@ export class DatabaseDataStore implements DataStore {
         updateTaskPk: null,
         leaseOwner: null,
         leaseExpires: null,
+        repairState: null,
         pasture,
         pastureReason,
       }
@@ -216,6 +217,7 @@ export class DatabaseDataStore implements DataStore {
         updateTaskPk: null,
         leaseOwner: null,
         leaseExpires: null,
+        repairState: null,
       }
     }
 
@@ -251,34 +253,38 @@ export class DatabaseDataStore implements DataStore {
     newLeaseId: LeaseIdType,
     now: Date,
     leaseTimeSeconds: number
-  ): Promise<void> {
+  ): Promise<ScheduledJobModel | null> {
     const expires = updateDate(now, leaseTimeSeconds)
-    return this.db.scheduledJobTable
-      .conditionalUpdate(jobPk, {
-        updateState: SCHEDULE_STATE_REPAIR,
-        // Set the lease owner to something that couldn't be leased
-        leaseOwner: newLeaseId,
-        // It expired in the past.
-        leaseExpires: expires,
-      }, sjAnd([
-        sjNotNull(SJ_UPDATE_STATE),
-        sjBeforeDate(SJ_LEASE_EXPIRES, now),
-      ]))
-      .then((count) => {
-        if (count > 0) {
-          return Promise.resolve()
+    return this.getScheduledJob(jobPk)
+      .then((src) => {
+        if (!src) {
+          return Promise.resolve(null)
         }
-        // Failure triggers can cause the query to not look right if someone steals
-        // the state between the initial conditional update and this query.
         return this.db.scheduledJobTable
-          .find(0, 1,
-            pkEquals(jobPk))
-          .then((jobs) => {
-            if (jobs.length > 0) {
-              return Promise.reject(new LeaseNotObtainedError(newLeaseId, jobs[0], jobs[0].leaseOwner, jobs[0].leaseExpires))
-            } else {
-              return Promise.reject(new ScheduledJobNotFoundError(jobPk))
-            }
+          .conditionalUpdate(jobPk, {
+            updateState: SCHEDULE_STATE_REPAIR,
+            leaseOwner: newLeaseId,
+            leaseExpires: expires,
+            repairState: src.repairState || src.updateState,
+          }, sjAnd([
+            sjNotNull(SJ_UPDATE_STATE),
+            sjBeforeDate(SJ_LEASE_EXPIRES, now),
+          ]))
+          .then((count) => {
+            return this.db.scheduledJobTable
+              .find(0, 1,
+                pkEquals(jobPk))
+              .then((jobs) => {
+                if (jobs.length > 0) {
+                  if (count > 0) {
+                    return Promise.resolve(jobs[0])
+                  }
+                  // Could not obtain lease, which means we return null.
+                  return Promise.resolve(null)
+                } else {
+                  return Promise.reject(new ScheduledJobNotFoundError(jobPk))
+                }
+              })
           })
       })
   }

@@ -11,3 +11,7 @@ export {
   taskFinished,
   disableSchedule,
 } from './combined'
+
+export {
+  repairExpiredSchedule,
+} from './repair'

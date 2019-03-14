@@ -74,6 +74,8 @@ export {
   DuplicateTaskStrategyRegistry,
   DUPLICATE_TASK_RUN_NEW,
   DUPLICATE_TASK_SKIP_NEW,
+  ALWAYS_SKIP_DUPLICATE_TASK_NAME,
+  ALWAYS_RUN_DUPLICATE_TASK_NAME,
 } from './duplicate-task'
 export {
   RetryTaskStrategy,

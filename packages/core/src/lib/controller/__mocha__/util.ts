@@ -207,7 +207,7 @@ export class ProxyDataStore implements DataStore {
   deleteScheduledJob(sched: ScheduledJobModel): Promise<boolean> {
     throw new Error('unexpected call to datastore')
   }
-  repairExpiredLeaseForScheduledJob(jobPk: string, newLeaseId: string, now: Date, leaseTimeSeconds: number): Promise<void> {
+  repairExpiredLeaseForScheduledJob(jobPk: string, newLeaseId: string, now: Date, leaseTimeSeconds: number): Promise<ScheduledJobModel> {
     throw new Error('unexpected call to datastore')
   }
   pollExecutableTasks(now: Date, limit: number): Promise<TaskModel[]> {
