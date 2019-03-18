@@ -3,7 +3,6 @@ import {
   DestroyOptions,
   Sequelize,
   Options,
-  CreateOptions,
   FindOptions,
   Model,
 } from 'sequelize'
@@ -44,7 +43,7 @@ export function createSqlDataStore(
 
 class SequelizeTable<T extends ScheduledJobDataModel | TaskDataModel> implements datastore.db.DbTableController<T> {
   constructor(
-    private readonly logger?: (sql: string, timeMillis?: number) => void
+    protected readonly logger?: (sql: string, timeMillis?: number) => void
   ) { }
   conditionalUpdate(
     primaryKey: datastore.PrimaryKeyType,
@@ -81,20 +80,13 @@ class SequelizeTable<T extends ScheduledJobDataModel | TaskDataModel> implements
     values: T
   ): Promise<void> {
     return new Promise((resolve, reject) =>
-      this._create(values, {
-        isNewRecord: true,
-
-        logging: this.logger,
-        benchmark: !!this.logger,
-
-        returning: false,
-      })
+      this._create(values)
         .then(() => { resolve() })
         .catch(reject)
     )
   }
 
-  _create(values: T, options: CreateOptions & { returning: false }): Bluebird<void> {
+  _create(values: T): Bluebird<any> {
     throw new Error(`not implemented`)
   }
 
@@ -153,8 +145,17 @@ class ScheduledJobTable extends SequelizeTable<ScheduledJobDataModel> {
     return this.model.update(newValues, options)
   }
 
-  _create(values: ScheduledJobDataModel, options: CreateOptions & { returning: false }): Bluebird<void> {
-    return this.model.create(values, options)
+  _create(values: ScheduledJobDataModel): Bluebird<any> {
+    // MS SQL has an issue with this...
+    // return this.model.create(values, ...)
+    return this.model
+      .build(values, {
+        isNewRecord: true,
+      })
+      .save({
+        logging: this.logger,
+        benchmark: !!this.logger,
+      })
   }
 
   _find(options: FindOptions): Bluebird<Model[]> {
@@ -178,8 +179,17 @@ class TaskTable extends SequelizeTable<TaskDataModel> {
     return this.model.update(newValues, options)
   }
 
-  _create(values: TaskDataModel, options: CreateOptions & { returning: false }): Bluebird<void> {
-    return this.model.create(values, options)
+  _create(values: TaskDataModel): Bluebird<any> {
+    // MS SQL has issues with this...
+    // return this.model.create(values, options)
+    return this.model
+      .build(values, {
+        isNewRecord: true,
+      })
+      .save({
+        logging: this.logger,
+        benchmark: !!this.logger,
+      })
   }
 
   _find(options: FindOptions): Bluebird<Model[]> {

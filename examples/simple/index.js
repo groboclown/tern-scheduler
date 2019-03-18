@@ -3,6 +3,20 @@
 const tern = require('@tern-scheduler/core');
 const storage = require('./storage');
 
+const LOG_DEBUG = process.env.DEBUG === 'y';
+const LOG_INFO = LOG_DEBUG || process.env.INFO !== 'n';
+function debug() {
+  if (LOG_DEBUG) {
+    console.log.apply(console, arguments);
+  }
+}
+function log() {
+  if (LOG_INFO) {
+    console.log.apply(console, arguments);
+  }
+}
+
+
 // --------------------------------------------------------------------------
 // Set up the scheduler configuration.
 // It uses a SQL database.  The setup requires setting the environment
@@ -109,7 +123,7 @@ config.store.updateSchema()
 
   ]))
   .catch(e => {
-    console.log(e);
+    console.error(e);
     process.exit(1);
   });
 
@@ -200,25 +214,29 @@ const JOB_RUNNER = {
 function jobRunner(taskId, jobName, context, messaging) {
   // Use the taskId as the executionId.
   const execId = taskId;
-  console.log(`Starting task ${taskId}: ${context}`);
+  log(`Starting task ${taskId}: ${context}`);
   const realRunner = JOB_RUNNER[jobName];
+  if (!realRunner) {
+    console.error(`ERROR: Has invalid job name ${jobName}`);
+    return { state: tern.executor.EXECUTION_DID_NOT_START, result: jobName };
+  }
   const p = new Promise(realRunner);
   if (jobName.startsWith('now')) {
     return p
       .then((v) => {
-        console.log(`Task ${taskId} completed in-execution: ${v}`);
+        log(`Task ${taskId} completed in-execution: ${v}`);
         return { state: tern.executor.EXECUTION_COMPLETED, result: v };
       })
       .catch((e) => {
         // Maybe include another fail state to allow for failed-to-start error?
-        console.log(`Task ${taskId} failed in-execution`, e);
+        log(`Task ${taskId} failed in-execution`, e);
         return { state: tern.executor.EXECUTION_FAILED, result: e.message };
       });
   }
   // The promise completes later, so emit the right message later.
   p
     .then((res) => {
-      console.log(`Completed task ${taskId}: ${res}`);
+      log(`Completed task ${taskId}: ${res}`);
       if (messaging) {
         messaging.emit('jobExecutionFinished',
           execId,
@@ -230,7 +248,7 @@ function jobRunner(taskId, jobName, context, messaging) {
       }
     })
     .catch((e) => {
-      console.log(`Failed task ${taskId}: ${e.message}`);
+      log(`Failed task ${taskId}: ${e.message}`);
       if (messaging) {
         messaging.emit('jobExecutionFinished',
           execId,
@@ -240,7 +258,7 @@ function jobRunner(taskId, jobName, context, messaging) {
           });
       }
     });
-  console.log(`Launched task ${taskId}.  Waiting for it to finish before emitting a message.`);
+  log(`Launched task ${taskId} for job ${jobName}.  Waiting for it to finish before emitting a message.`);
   return Promise.resolve({ state: tern.executor.EXECUTION_RUNNING, jobId: execId });
 }
 

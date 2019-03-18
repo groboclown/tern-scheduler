@@ -323,7 +323,9 @@ export interface DataStore {
    * @param scheduledJob
    * @param limit
    */
-  getActiveTasksForScheduledJob(scheduledJob: ScheduledJobModel, limit: number): Promise<TaskModel[]>
+  getTasksForScheduledJob(
+    scheduledJob: ScheduledJobModel, states: TaskStateType[], limit: number
+  ): Promise<TaskModel[]>
 
   /**
    *

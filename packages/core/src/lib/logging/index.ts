@@ -1,6 +1,7 @@
 
-export let DEBUG = false
-export let INFO = true
+// TODO this needs some major improvements
+export let DEBUG = process.env.DEBUG === 'y'
+export let INFO = DEBUG || process.env.INFO !== 'n'
 
 // This file is allowed to have console logging, because that's the point of it.
 /* tslint:disable:no-console */

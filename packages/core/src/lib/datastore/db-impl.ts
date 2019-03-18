@@ -436,15 +436,15 @@ export class DatabaseDataStore implements DataStore {
       })
   }
 
-  getActiveTasksForScheduledJob(scheduledJob: ScheduledJobModel, limit: number): Promise<TaskModel[]> {
+  getTasksForScheduledJob(
+    scheduledJob: ScheduledJobModel,
+    states: TaskStateType[],
+    limit: number
+  ): Promise<TaskModel[]> {
     return this.db.taskTable
       .find(0, limit, new database.AndConditional([
         tkEquals(TK_SCHEDULE_PK, scheduledJob.pk),
-        tkOneOf('state', [
-          TASK_STATE_PENDING,
-          TASK_STATE_QUEUED,
-          TASK_STATE_STARTED,
-        ]),
+        tkOneOf('state', states),
       ]))
   }
 

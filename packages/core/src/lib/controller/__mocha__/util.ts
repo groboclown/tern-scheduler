@@ -243,7 +243,7 @@ export class ProxyDataStore implements DataStore {
   getTaskByExecutionJobId(execJobId: string): Promise<TaskModel | null> {
     throw new Error('unexpected call to datastore')
   }
-  getActiveTasksForScheduledJob(scheduledJob: ScheduledJobModel, limit: number): Promise<TaskModel[]> {
+  getTasksForScheduledJob(): Promise<TaskModel[]> {
     throw new Error('unexpected call to datastore')
   }
   markTaskQueued(task: TaskModel, now: Date): Promise<void> {
