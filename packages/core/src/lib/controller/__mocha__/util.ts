@@ -258,6 +258,9 @@ export class ProxyDataStore implements DataStore {
   markTaskCompleted(task: TaskModel, now: Date, info: string): Promise<void> {
     throw new Error('unexpected call to datastore')
   }
+  markTaskSkipped(task: TaskModel, now: Date): Promise<void> {
+    throw new Error('unexpected call to datastore')
+  }
   markTaskFailed(
     task: TaskModel, now: Date, expectedCurrentState: TaskStateType,
     failedState: "complete-queued" | "complete-error" | "failed" | "fail-restarted", info: string

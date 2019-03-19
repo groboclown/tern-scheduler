@@ -28,10 +28,12 @@ env:
     - POSTGRES_PASSWORD=tern-pw
     - POSTGRES_PORT=19001
 
-    - MARIADB_DB=tern
-    - MARIADB_USERNAME=tern-user
-    - MARIADB_PASSWORD=tern-pw
-    - MARIADB_PORT=19002
+    # MariaDB has some timestamp precision issues
+    # that are being investigated.
+    # - MARIADB_DB=tern
+    # - MARIADB_USERNAME=tern-user
+    # - MARIADB_PASSWORD=tern-pw
+    # - MARIADB_PORT=19002
 
     - MSSQL_DB=master
     - MSSQL_USERNAME=sa

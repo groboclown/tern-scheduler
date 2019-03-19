@@ -52,11 +52,15 @@ import {
   isTaskCreationDisable,
   isTaskCreationStrategyAfterFinish
 } from '../strategies/task-creation/api'
-import { SCHEDULE_STATE_START_TASK, SCHEDULE_STATE_END_TASK, SCHEDULE_STATE_PASTURE } from '../model/schedule'
+import {
+  SCHEDULE_STATE_START_TASK,
+  SCHEDULE_STATE_END_TASK,
+  SCHEDULE_STATE_PASTURE
+} from '../model/schedule'
 import { cloneDateTime } from '../internal/time-util'
 
 
-const DUPLICATE_QUEUED_TASK_LIMIT = 15
+const DUPLICATE_PENDING_TASK_LIMIT = 15
 
 // Functions that still perform at the controller level, but need to coordinate the operation
 // between the different model parts.
@@ -160,7 +164,7 @@ export function startTask(
           if (!execStatus) {
             // Skipped
             return store
-              .markTaskCompleted(task, currentTimeUTC(), '(skipped)')
+              .markTaskSkipped(task, currentTimeUTC())
               .then(() => ({ value: task }))
           }
           if (isJobExecutionStateCompleted(execStatus)) {
@@ -439,7 +443,7 @@ function addTaskDuplicateCheck(
   // This is not part of duplicate strategy.
   return store
     // Do not add a task if there's already a pending task.
-    .getTasksForScheduledJob(sched, [TASK_STATE_QUEUED], DUPLICATE_QUEUED_TASK_LIMIT)
+    .getTasksForScheduledJob(sched, [TASK_STATE_PENDING], DUPLICATE_PENDING_TASK_LIMIT)
     .then((queuedTasks) => {
       if (queuedTasks.length > 0) {
         logInfo(

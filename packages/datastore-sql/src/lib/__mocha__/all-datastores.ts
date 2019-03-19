@@ -94,4 +94,7 @@ class TestJobExecutionManager implements executor.JobExecutionManager {
       { state: executor.EXECUTION_RUNNING, jobId: execId }
     )
   }
+  getTaskInitiatedJobState(): Promise<executor.JobExecutionState> {
+    return Promise.resolve({ state: 'did-not-start' })
+  }
 }

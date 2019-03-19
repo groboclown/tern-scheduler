@@ -474,7 +474,13 @@ export class DatabaseDataStore implements DataStore {
       executionFinished: now,
       completedInfo: info,
     })
+  }
 
+  markTaskSkipped(task: TaskModel, now: Date): Promise<void> {
+    return this.markTaskState(task.pk, TASK_STATE_QUEUED, TASK_STATE_COMPLETED, {
+      executionFinished: now,
+      completedInfo: '{"skipped":true}',
+    })
   }
 
   markTaskFailed(

@@ -106,6 +106,12 @@ config.store.updateSchema()
           withMessaging: (messaging) => {
             this._messaging = messaging;
           },
+          getTaskInitiatedJobState: (task) => {
+            // used to query if the job framework knows about the task
+            // being started, for repairing the state of the scheduler
+            // in case of an unexpected shutdown in a bad place.
+            return Promise.resolve({ state: 'did-not-start' })
+          },
 
           // Internal stuff
           _messaging: null,

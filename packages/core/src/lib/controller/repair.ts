@@ -5,9 +5,14 @@ import {
   SCHEDULE_STATE_END_TASK,
   SCHEDULE_STATE_PASTURE,
   LeaseIdType,
+  TaskModel,
+  TASK_STATE_QUEUED,
+  TASK_STATE_STARTED,
+  TASK_STATE_COMPLETE_QUEUED,
+  TASK_STATE_PENDING,
 } from '../model'
 import {
-  DataStore
+  DataStore,
 } from '../datastore'
 import {
   LeaseBehavior,
@@ -101,6 +106,11 @@ function performRepair(
       // This indicates a bug in the datastore, where it incorrectly copied the update
       // state into the repair state.
 
+      // For any other value:
+      // Either an external entity set the state to an unexpected value, or the list
+      // of states expanded without updating this repair block, or there was a bug
+      // in the code.
+
       messaging.emit('internalError', {
         message: `Internal Error: Schedule ${schedule.pk} state [${schedule.repairState}] unknown`,
       })
@@ -117,7 +127,45 @@ function repairAddTask(
   now: Date,
   messaging: MessagingEventEmitter
 ): Promise<ExitBehavior> {
-  return Promise.reject('not implemented')
+  // This state only happens when the schedule is first created.
+  // No task has run yet.
+  if (schedule.pasture) {
+    return Promise.resolve({ pastureReason: schedule.pastureReason || '<invalid state>' })
+  }
+
+  const taskPk = schedule.updateTaskPk
+  if (taskPk) {
+    // The task was added, but the lock wasn't properly released.
+    // Probably shouldn't happen, but some store implementations might
+    // be able to get into this state.
+    // Double check that the task was actually created.
+    return getPendingTasksForSchedule(store, schedule)
+      .then((tasks) => {
+        if (tasks.length > 0) {
+          // It was created.  Just need to close off the lease.
+          // There's nothing more to do here.
+          return Promise.resolve({})
+        } else {
+          // It wasn't created.  Or, it was created, but it's in an active
+          // state.
+          // FIXME create the task.  Reuse logic from the `combined.ts` file.
+          return Promise.reject(`task ${taskPk} recorded: repair not implemented`)
+        }
+      })
+  } else {
+    // The scheduled job didn't record in itself the task, or the task
+    // wasn't created.
+    return getPendingOrActiveTasksForSchedule(store, schedule)
+      .then((tasks) => {
+        if (tasks.length > 0) {
+
+        } else {
+
+        }
+        // FIXME create the task.  Reuse logic from the `combined.ts` file.
+        return Promise.reject(`task ${taskPk} recorded: repair not implemented`)
+      })
+  }
 }
 
 
@@ -151,4 +199,27 @@ function repairPasture(
   messaging: MessagingEventEmitter
 ): Promise<ExitBehavior> {
   return Promise.reject('not implemented')
+}
+
+const TASK_FETCH_LIMIT = 100
+
+/*
+function getActiveTasksForSchedule(store: DataStore, schedule: ScheduledJobModel): Promise<TaskModel[]> {
+  return store.getTasksForScheduledJob(schedule, [
+    TASK_STATE_QUEUED, TASK_STATE_STARTED, TASK_STATE_COMPLETE_QUEUED
+  ], TASK_FETCH_LIMIT)
+}
+*/
+
+function getPendingTasksForSchedule(store: DataStore, schedule: ScheduledJobModel): Promise<TaskModel[]> {
+  return store.getTasksForScheduledJob(schedule, [
+    TASK_STATE_PENDING,
+  ], TASK_FETCH_LIMIT)
+}
+
+function getPendingOrActiveTasksForSchedule(store: DataStore, schedule: ScheduledJobModel): Promise<TaskModel[]> {
+  return store.getTasksForScheduledJob(schedule, [
+    TASK_STATE_QUEUED, TASK_STATE_STARTED, TASK_STATE_COMPLETE_QUEUED,
+    TASK_STATE_PENDING,
+  ], TASK_FETCH_LIMIT)
 }

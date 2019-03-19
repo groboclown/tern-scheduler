@@ -396,6 +396,20 @@ export interface DataStore {
    * @param now the date for right now; must be in UTC time zone; some data stores may instead
    *  ignore this value.
    */
+  markTaskSkipped(task: TaskModel, now: Date): Promise<void>
+
+  /**
+   *
+   * If the operation cannot set the state because the existing state isn't
+   * correct, then an error is thrown.
+   *
+   * As a write operation, this requires a lease on the owning scheduled job.
+   * However, the data store does not make any such assurances.
+   *
+   * @param task
+   * @param now the date for right now; must be in UTC time zone; some data stores may instead
+   *  ignore this value.
+   */
   markTaskFailed(
     task: TaskModel, now: Date, expectedCurrentState: TaskStateType,
     failedState: TASK_STATE_COMPLETE_ERROR | TASK_STATE_COMPLETE_QUEUED |
