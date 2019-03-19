@@ -18,10 +18,13 @@ env:
 
     # Docker-based database settings.
     # These values are based on the docker-compose parameters.
-    - MYSQL_DB=tern
-    - MYSQL_USERNAME=tern-user
-    - MYSQL_PASSWORD=tern-pw
-    - MYSQL_PORT=19000
+
+    # MySQL has some timestamp precision issues
+    # that are being investigated.
+    #- MYSQL_DB=tern
+    #- MYSQL_USERNAME=tern-user
+    #- MYSQL_PASSWORD=tern-pw
+    #- MYSQL_PORT=19000
 
     - POSTGRES_DB=tern
     - POSTGRES_USERNAME=tern-user
