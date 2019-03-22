@@ -129,8 +129,10 @@ export interface DataStore {
    * even if the lease ID matches up.
    *
    * Errors are raised in the promise for:
-   * - Lease could not be obtained (some other process has the lock)
-   * - Job is not in the data store
+   * - Lease could not be obtained (some other process has the lock).
+   *   Rejects with a LeaseNotObtainedError
+   * - Job is not in the data store.
+   *   Rejects with a ScheduledJobNotFoundError
    *
    * @param jobPk the primary key of the scheduled job to lease.
    * @param leaseId the lease ID is a custom value per lease operation.
@@ -330,7 +332,7 @@ export interface DataStore {
   /**
    *
    * If the operation cannot set the state because the existing state isn't
-   * correct, then an error is thrown.
+   * correct, then InvalidTaskStateError is thrown.
    *
    * As a write operation, this requires a lease on the owning scheduled job.
    * However, the data store does not make any such assurances.

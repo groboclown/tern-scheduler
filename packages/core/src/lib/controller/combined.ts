@@ -1,5 +1,3 @@
-// This file is the heart of the scheduler.
-// It is complex logic that needs to be right.
 
 import {
   createScheduledJobAlone,
@@ -45,7 +43,12 @@ import {
 } from '../executor/types'
 import { TernError } from '../errors'
 import { logInfo } from '../logging'
-import { TaskNotFoundError, InvalidJobExecutionStatusError } from '../errors/controller-errors'
+import {
+  TaskNotFoundError,
+  InvalidJobExecutionStatusError,
+  LeaseNotObtainedError,
+  InvalidTaskStateError,
+} from '../errors/controller-errors'
 import { RetryTaskStrategyRegistry } from '../strategies/retry'
 import {
   isTaskCreationStrategyAfterStart,
@@ -248,6 +251,17 @@ export function startTask(
           return { value: null }
         })
   )
+    .catch((e) => {
+      if (e instanceof LeaseNotObtainedError) {
+        // This operation attempts to begin the execution of a task.  If a
+        // lease could not be obtained, then the state of the needs-to-execute
+        // of the task has not changed.  Therefore, it is safe to not
+        // propigate this error.
+        messaging.emit('taskStartNoLease', task, e.leaseOwner)
+        return Promise.resolve()
+      }
+      return Promise.reject(e)
+    })
     // Make sure we return void
     .then(() => { })
 }
@@ -296,6 +310,11 @@ export function taskFinished(
 
       return runUpdateInLease(store, SCHEDULE_STATE_END_TASK, task.schedule, task.pk, now, lease, messaging,
         (sched): Promise<LeaseExitStateValue<any>> => {
+          // We have the lock, but there is also a possibility that the
+          // task has already been marked as completed by another service
+          // (for example, if they are listening to a shared message queue).
+          // In that situation, the markTask(state) can cause a failure
+          // because the task is not in the exected started state.
           if (isJobExecutionStateFailed(result)) {
             return store
               .markTaskFailed(task, now, TASK_STATE_STARTED, TASK_STATE_COMPLETE_ERROR, result.result || '')
@@ -340,6 +359,30 @@ export function taskFinished(
           } else {
             return Promise.reject(new InvalidJobExecutionStatusError(result))
           }
+        })
+        .catch((e) => {
+          // This function is called by a service that receives the "task
+          // completed" message from the job execution framework.  This is not
+          // guaranteed to be recoverable by other services.  If the lease is not
+          // obtained, then we should propagate this error to inform the user
+          // that the execution finished state may not have been correctly updated.
+
+          // TODO convert the error to an update-not-performed kind of error, with
+          // necessary information.
+          if (e instanceof LeaseNotObtainedError) {
+            // Do not propagate this error.
+            messaging.emit('taskFinishedNoLease', task, e.leaseOwner, result)
+            return Promise.resolve()
+          }
+
+          if (e instanceof InvalidTaskStateError) {
+            // This means that the task was already updated by another service
+            // before this one obtained the lock.
+            messaging.emit('taskFinishedNotUpdated', task, e.newState, result)
+            return Promise.resolve()
+          }
+
+          return Promise.reject(e)
         })
     })
     // make sure we return void

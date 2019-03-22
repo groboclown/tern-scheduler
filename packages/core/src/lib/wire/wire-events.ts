@@ -25,6 +25,7 @@ import {
   logCriticalError,
   logNotificationError,
   logInfo,
+  logDebug,
 } from '../logging'
 import { LeaseNotObtainedError } from '../errors'
 
@@ -49,12 +50,7 @@ export function wireDataStore(
   jobExecutor.withMessaging(messaging)
   messaging
     .on('generalError', (e) => {
-      // Standard log handling.  End users can monitor this in their own way.
-      if (e instanceof LeaseNotObtainedError) {
-        logNotificationError('(failed to obtain lease)', e.message)
-      } else {
-        logCriticalError(e)
-      }
+      logCriticalError(e)
     })
     .on('internalError', (e) => {
       logCriticalError('Internal error discovered:')
@@ -112,6 +108,18 @@ export function wireDataStore(
       // FIXME inspect the task for repair
       // FIXME inspect the task for repair
       logNotificationError(`task queue took too long: ${task.pk}`, null)
+    })
+    .on('taskStartNoLease', (task, leaseOwner) => {
+      logDebug('taskStartNoLease', `task ${task.pk} not started because lease owned by someone else.`)
+    })
+    .on('taskFinishedNoLease', (task, leaseOwner, finishedState) => {
+      // TODO possibly enter repair state.
+      logInfo('taskFinishedNoLease',
+        `task ${task.pk} not updated because it is leased by someone else ${JSON.stringify(finishedState)}`)
+    })
+    .on('taskFinishedNotUpdated', (task, discoveredState, finishedState) => {
+      logDebug('taskFinishedNotUpdated',
+        `task ${task.pk} not updated because somone else changed it to ${discoveredState}`)
     })
     .on('jobExecutionFinished', (execId, result) => {
       const now = currentTimeUTC()

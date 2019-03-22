@@ -6,6 +6,8 @@ import StrictEventEmitter from 'strict-event-emitter-types'
 import {
   TaskModel,
   ScheduledJobModel,
+  TaskStateType,
+  LeaseIdType,
 } from '../model'
 import {
   ExecutionJobId,
@@ -43,6 +45,32 @@ export interface SchedulerEvents {
    * The task has already been updated with the right finish state.
    */
   taskFinished: (task: TaskModel) => void
+
+  /**
+   * An attempt was made to update the task's state after completion, but
+   * something else had updated the state before this scheduler could perform
+   * the updates.  Most likely, this means that a different scheduler performed
+   * the update.  This is more of a notification, as the system should be in
+   * a valid state when this is called.
+   */
+  taskFinishedNotUpdated: (task: TaskModel, discoveredState: TaskStateType, finishedState: JobExecutionState) => void
+
+  /**
+   * The task could not be marked as finished because the service performing
+   * the operation could not obtain the lease.  If you are running a system
+   * without a shared message queue where the completion notice is sent to all
+   * services, then this can mean that the scheduled job is in a bad state
+   * and it needs repairs.
+   */
+  taskFinishedNoLease: (task: TaskModel, leaseOwner: LeaseIdType | null, finishedState: JobExecutionState) => void
+
+  /**
+   * The scheduler attempted to start a task, but a lease on the owning
+   * scheduled job could not be obtained.  This is a notice message, as
+   * for most situations this means another scheduler started working it
+   * before the source service could get the lease.
+   */
+  taskStartNoLease: (task: TaskModel, leaseOwner: LeaseIdType | null) => void
 }
 
 

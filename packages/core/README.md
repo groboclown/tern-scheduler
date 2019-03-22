@@ -126,22 +126,3 @@ The implementation uses a variation on the [two-phase commit protocol](https://e
    * If a scheduled job is in the "update-error" state, then its state is indeterminate.
    * If the lock has expired, then its state should be determined through the task state.
    * If the software determines that it wasn't due to a Tern coding error, then the state should be repaired based on the states of its running tasks.
-
-
-## Implementation TO-DOs
-
-### Scheduled Job Delete
-
-Deleting scheduled jobs is broken right now - it will leave tasks without parents.  So it's currently disabled.
-
-### Repair
-
-Repairing scheduled jobs and tasks in an uncertain state needs to be handled.  The code is present to detect them and trigger a fix execution, but the fix needs to be written.
-
-### One Time Task Removal
-
-If we want to cancel one future task, then doing so should set the task to a new "never run" state, and peel a new subsequent task as though the just-canceled task started then completed.  It's a new "finished" state.  This is an easy win for functionality.
-
-### CRON
-
-The cron implementation isn't there yet.  Right now, writing the "when to fire the next job" is a DIY project.

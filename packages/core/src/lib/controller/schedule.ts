@@ -11,7 +11,7 @@ import {
   PollWaitTimes,
 } from '../strategies/poll'
 import {
-  ScheduledJobNotFoundError,
+  ScheduledJobNotFoundError, LeaseNotObtainedError,
 } from '../errors'
 import {
   logNotificationError,
@@ -260,12 +260,26 @@ export function runUpdateInLease<T>(
       leaseBehavior.registerRetryCallback(timeout, () => reject(reason))
     })
   }
-  let leaseAttemptPromise = store.leaseScheduledJob(jobPk, updateOperation, updateTaskPk, leaseOwner, now, leaseBehavior.leaseTimeSeconds)
+  let leaseAttemptPromise = store.leaseScheduledJob(
+    jobPk,
+    updateOperation,
+    updateTaskPk,
+    leaseOwner,
+    now,
+    leaseBehavior.leaseTimeSeconds
+  )
   for (const retrySeconds of leaseBehavior.retrySecondsDelay) {
     leaseAttemptPromise = leaseAttemptPromise
       .catch(rejectDelay<void>(retrySeconds))
       // The rejection will fire a reject when its time is up, and it was already reported.
-      .catch(() => store.leaseScheduledJob(jobPk, updateOperation, updateTaskPk, leaseOwner, now, leaseBehavior.leaseTimeSeconds))
+      .catch(() => store.leaseScheduledJob(
+        jobPk,
+        updateOperation,
+        updateTaskPk,
+        leaseOwner,
+        now,
+        leaseBehavior.leaseTimeSeconds
+      ))
   }
   // leaseAttemptPromise is now setup such that if the last attempt failed, it will
   // be in the catch() block, and if it passed, then the then() block has the result.
