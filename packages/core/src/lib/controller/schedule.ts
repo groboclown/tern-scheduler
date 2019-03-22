@@ -11,7 +11,7 @@ import {
   PollWaitTimes,
 } from '../strategies/poll'
 import {
-  ScheduledJobNotFoundError, LeaseNotObtainedError,
+  ScheduledJobNotFoundError,
 } from '../errors'
 import {
   logNotificationError,

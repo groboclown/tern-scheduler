@@ -27,7 +27,6 @@ import {
   logInfo,
   logDebug,
 } from '../logging'
-import { LeaseNotObtainedError } from '../errors'
 
 
 
